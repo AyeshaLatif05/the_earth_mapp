@@ -1,0 +1,188 @@
+// lib/screens/calculation_tools_screen.dart
+
+import 'package:flutter/material.dart';
+
+class CalculationToolsScreen extends StatelessWidget {
+  const CalculationToolsScreen({super.key});
+
+  static const List<_ToolItem> _tools = [
+    _ToolItem(
+      title: 'Check Altitude',
+      subtitle: 'Explore Earth in an interactive 3D view',
+      bgColor: Color(0xFFEDEAF5),
+      iconAsset: 'assets/images/ic_altitude.png',
+    ),
+    _ToolItem(
+      title: 'Find Traffic',
+      subtitle: 'See real-time traffic updates on your route',
+      bgColor: Color(0xFFFFF8E1),
+      iconAsset: 'assets/images/ic_traffic.png',
+    ),
+    _ToolItem(
+      title: 'GPS Camera',
+      subtitle: 'Save photos with exact location info',
+      bgColor: Color(0xFFE3F2FD),
+      iconAsset: 'assets/images/ic_gps_camera.png',
+    ),
+    _ToolItem(
+      title: 'Find Distance',
+      subtitle: 'Shows distance between locations',
+      bgColor: Color(0xFFE8F0FB),
+      iconAsset: 'assets/images/ic_find_distance.png',
+    ),
+    _ToolItem(
+      title: 'World Clock',
+      subtitle: 'View the local time for any location worldwide',
+      bgColor: Color(0xFFFCE8E8),
+      iconAsset: 'assets/images/ic_world_clock.png',
+    ),
+    _ToolItem(
+      title: 'Near by Places',
+      subtitle: 'Shows nearby spots, shops, and attractions',
+      bgColor: Color(0xFFEAF4EA),
+      iconAsset: 'assets/images/ic_nearby.png',
+    ),
+    _ToolItem(
+      title: 'Famous Places',
+      subtitle: 'Discover landmarks around the globe',
+      bgColor: Color(0xFFFFF8EC),
+      iconAsset: 'assets/images/ic_famous_places.png',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── AppBar ──────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back,
+                        color: Colors.black, size: 22),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const Text(
+                    'Calculation Tools',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Grid ────────────────────────────────────────
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                child: GridView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.88,
+                  ),
+                  itemCount: _tools.length,
+                  itemBuilder: (context, index) {
+                    return _ToolCard(tool: _tools[index]);
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Tool Card ──────────────────────────────────────────────────────────────────
+class _ToolCard extends StatelessWidget {
+  const _ToolCard({required this.tool});
+
+  final _ToolItem tool;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+        decoration: BoxDecoration(
+          color: tool.bgColor,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Icon — top center
+            Center(
+              child: Image.asset(
+                tool.iconAsset,
+                width: 64,
+                height: 64,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.white38,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.image_outlined,
+                      color: Colors.grey, size: 30),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              tool.title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF111111),
+                height: 1.2,
+                letterSpacing: -0.2,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              tool.subtitle,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF6B7280),
+                height: 1.45,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Data model ────────────────────────────────────────────────────────────────
+class _ToolItem {
+  final String title;
+  final String subtitle;
+  final Color bgColor;
+  final String iconAsset;
+
+  const _ToolItem({
+    required this.title,
+    required this.subtitle,
+    required this.bgColor,
+    required this.iconAsset,
+  });
+}
