@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -16,12 +17,12 @@ class _SplashScreenState extends State<SplashScreen> {
 
     Timer(const Duration(seconds: 6), () {
       // Navigate to next screen
-    //   Navigator.pushReplacement(
-    //     context,
-    //     MaterialPageRoute(
-    //       builder: (context) => const HomeScreen(),
-    //     ),
-    //   );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const HomeScreen(),
+        ),
+      );
     });
   }
 
@@ -31,7 +32,7 @@ class _SplashScreenState extends State<SplashScreen> {
       backgroundColor: Colors.white,
       body: Center(
         child: Image.asset(
-          'assets/logo.png',
+          'assets/icon earth map.png',
           width: 150,
           height: 150,
         ),

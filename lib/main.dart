@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 import 'onboarding_screen.dart';
+import 'home_screen.dart';
+import 'information_tools_screen.dart';
+import 'map_tools_screen.dart';
+import 'meet_in_middle_screen.dart';
+import 'level_meter_screen.dart';
+import 'oxygen_level_screen.dart';
+import 'voice_navigation_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -34,7 +41,13 @@ class MyApp extends StatelessWidget {
       ),
       home: const OnboardingScreen(),
       routes: {
-        '/home': (context) => const MyHomePage(title: 'Live Earth Map'),
+        '/home': (context) => const HomeScreen(),
+        '/information_tools': (context) => const InformationToolsScreen(),
+        '/map_tools': (context) => const MapToolsScreen(),
+        '/meet_in_middle': (context) => const MeetInMiddleScreen(),
+        '/level_meter': (context) => const LevelMeterScreen(),
+        '/oxygen_level': (context) => const OxygenLevelScreen(),
+        '/voice_navigation': (context) => const VoiceNavigationScreen(),
       },
     );
   }

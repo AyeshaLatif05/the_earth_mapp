@@ -1,0 +1,427 @@
+// lib/screens/voice_navigation_screen.dart
+
+import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+class VoiceNavigationScreen extends StatefulWidget {
+  const VoiceNavigationScreen({super.key});
+
+  @override
+  State<VoiceNavigationScreen> createState() => _VoiceNavigationScreenState();
+}
+
+class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
+  GoogleMapController? _mapController;
+
+  // Beşiktaş coordinates matching the screenshot
+  static const CameraPosition _initialPosition = CameraPosition(
+    target: LatLng(41.0438, 29.0067),
+    zoom: 14.2,
+  );
+
+  bool _is3DView = false;
+  MapType _mapType = MapType.normal;
+  bool _trafficEnabled = false;
+
+  bool _voiceGuidanceActive = false;
+
+  // Location share trigger
+  void _shareLocation() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.share, color: Colors.white),
+            SizedBox(width: 10),
+            Text('Location Shared successfully!'),
+          ],
+        ),
+        backgroundColor: const Color(0xFF1E7E6C),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  // Voice navigation started speech simulation trigger
+  void _toggleVoiceNavigation() {
+    setState(() {
+      _voiceGuidanceActive = !_voiceGuidanceActive;
+    });
+
+    if (_voiceGuidanceActive) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.record_voice_over, color: Colors.white),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Voice guidance started! "Head northeast towards Barbaros Boulevard."',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF1E7E6C),
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Voice Navigation',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
+            letterSpacing: -0.2,
+          ),
+        ),
+        centerTitle: false,
+      ),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // ── Full Screen Interactive Map Backdrop ──
+            Positioned.fill(
+              child: GoogleMap(
+                initialCameraPosition: _initialPosition,
+                onMapCreated: (controller) => _mapController = controller,
+                zoomControlsEnabled: false,
+                myLocationButtonEnabled: false,
+                mapToolbarEnabled: false,
+                mapType: _mapType,
+                trafficEnabled: _trafficEnabled,
+              ),
+            ),
+
+            // ── Left Side Map Layer Controls ──
+            Positioned(
+              left: 14,
+              top: 14,
+              child: Column(
+                children: [
+                  _buildCircleControl(
+                    icon: Icons.view_in_ar,
+                    isActive: _is3DView,
+                    onTap: () {
+                      setState(() {
+                        _is3DView = !_is3DView;
+                        if (_is3DView) {
+                          _mapController?.animateCamera(
+                            CameraUpdate.newCameraPosition(
+                              const CameraPosition(
+                                target: LatLng(41.0438, 29.0067),
+                                zoom: 15.0,
+                                tilt: 45.0,
+                              ),
+                            ),
+                          );
+                        } else {
+                          _mapController?.animateCamera(
+                            CameraUpdate.newCameraPosition(
+                              const CameraPosition(
+                                target: LatLng(41.0438, 29.0067),
+                                zoom: 14.2,
+                                tilt: 0.0,
+                              ),
+                            ),
+                          );
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _buildCircleControl(
+                    icon: Icons.language,
+                    isActive: _mapType == MapType.hybrid,
+                    onTap: () {
+                      setState(() {
+                        _mapType = _mapType == MapType.normal
+                            ? MapType.hybrid
+                            : MapType.normal;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _buildCircleControl(
+                    icon: Icons.traffic,
+                    isActive: _trafficEnabled,
+                    onTap: () {
+                      setState(() {
+                        _trafficEnabled = !_trafficEnabled;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Right Side Navigation Zoom Controls ──
+            Positioned(
+              right: 14,
+              top: 14,
+              child: Column(
+                children: [
+                  _buildCircleControl(
+                    icon: Icons.add,
+                    onTap: () {
+                      _mapController?.animateCamera(CameraUpdate.zoomIn());
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _buildCircleControl(
+                    icon: Icons.remove,
+                    onTap: () {
+                      _mapController?.animateCamera(CameraUpdate.zoomOut());
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _buildCircleControl(
+                    icon: Icons.my_location,
+                    iconColor: const Color(0xFF1E7E6C),
+                    onTap: () {
+                      _mapController?.animateCamera(
+                        CameraUpdate.newCameraPosition(_initialPosition),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Simulated Voice Guidance Speech Bubble Overlay ──
+            if (_voiceGuidanceActive)
+              Positioned(
+                top: 200,
+                left: 32,
+                right: 32,
+                child: TweenAnimationBuilder(
+                  duration: const Duration(milliseconds: 300),
+                  tween: Tween<double>(begin: 0.0, end: 1.0),
+                  builder: (context, double value, child) {
+                    return Opacity(
+                      opacity: value,
+                      child: Transform.scale(
+                        scale: 0.9 + (value * 0.1),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0A0E2A).withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.volume_up, color: Color(0xFF2EA690), size: 28),
+                        SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Voice Guidance Active',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF2EA690),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'In 300 meters, turn right onto Barbaros Boulevard.',
+                                style: TextStyle(
+                                  fontSize: 14.5,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+            // ── GPS Bottom Details Panel ──
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 15,
+                      offset: Offset(0, -4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Location pin and address row
+                    Row(
+                      children: [
+                        Image.asset(
+                          'assets/loc.png',
+                          width: 28,
+                          height: 28,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.location_on,
+                            color: Color(0xFFE53935),
+                            size: 26,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Location',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF9CA3AF),
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Location here, Rawalpindi, Pakistan',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF111111),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Image.asset(
+                            'assets/share-2.png',
+                            width: 20,
+                            height: 20,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.share_outlined,
+                              color: Color(0xFF111111),
+                              size: 22,
+                            ),
+                          ),
+                          onPressed: _shareLocation,
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Start Navigation Large Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _toggleVoiceNavigation,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1E7E6C),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Text(
+                          _voiceGuidanceActive ? 'Stop Navigation' : 'Start Navigation',
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.1,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Floating Circle map controller helper widget
+  Widget _buildCircleControl({
+    required IconData icon,
+    required VoidCallback onTap,
+    bool isActive = false,
+    Color iconColor = const Color(0xFF111111),
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF1E7E6C) : Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(
+          icon,
+          color: isActive ? Colors.white : iconColor,
+          size: 22,
+        ),
+      ),
+    );
+  }
+}
