@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'onboarding_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'home_screen.dart';
 import 'information_tools_screen.dart';
 import 'map_tools_screen.dart';
@@ -7,9 +7,27 @@ import 'meet_in_middle_screen.dart';
 import 'level_meter_screen.dart';
 import 'oxygen_level_screen.dart';
 import 'voice_navigation_screen.dart';
+import 'parking_screen.dart';
+import 'altitude_screen.dart';
+import 'cameras_screen.dart';
+import 'world_clock_screen.dart';
+import 'spalsh/calculation_screen.dart';
+import 'nearby_places_screen.dart';
+import 'spalsh/spalsh_screen.dart';
+import 'saved_parkings_screen.dart';
+import 'street_view_screen.dart';
+import 'live_stream_player_screen.dart';
+import 'asia_screen.dart';
+import 'countries_info_screen.dart';
+import 'settings_screen.dart';
+import 'feedback_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -39,7 +57,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
-      home: const OnboardingScreen(),
+      home: const SplashScreen(),
       routes: {
         '/home': (context) => const HomeScreen(),
         '/information_tools': (context) => const InformationToolsScreen(),
@@ -48,6 +66,19 @@ class MyApp extends StatelessWidget {
         '/level_meter': (context) => const LevelMeterScreen(),
         '/oxygen_level': (context) => const OxygenLevelScreen(),
         '/voice_navigation': (context) => const VoiceNavigationScreen(),
+        '/parking': (context) => const ParkingScreen(),
+        '/altitude_finder': (context) => const AltitudeScreen(),
+        '/cameras': (context) => const CamerasScreen(),
+        '/world_clock': (context) => const WorldClockScreen(),
+        '/calculation_tools': (context) => const CalculationToolsScreen(),
+        '/nearby_places': (context) => const NearbyPlacesScreen(),
+        '/saved_parkings': (context) => const SavedParkingsScreen(),
+        '/street_view': (context) => const StreetViewScreen(),
+        '/live_stream_player': (context) => const LiveStreamPlayerScreen(),
+        '/asia': (context) => const AsiaScreen(),
+        '/countries_info': (context) => const CountriesInfoScreen(),
+        '/settings': (context) => const SettingsScreen(),
+        '/feedback': (context) => const FeedbackScreen(),
       },
     );
   }
@@ -120,7 +151,7 @@ class _MyHomePageState extends State<MyHomePage> {
           // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
           // action in the IDE, or press "p" in the console), to see the
           // wireframe for each widget.
-          mainAxisAlignment: .center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text('You have pushed the button this many times:'),
             Text(

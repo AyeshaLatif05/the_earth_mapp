@@ -43,7 +43,7 @@ class MapToolsScreen extends StatelessWidget {
               bgColor: const Color(0xFFE6F4FF), // Pastel blue
               iconAsset: 'assets/trav.png',
               onTap: () {
-                // Open 3D Earth Map
+                Navigator.pushNamed(context, '/street_view');
               },
             ),
             _MapToolCard(
@@ -52,7 +52,7 @@ class MapToolsScreen extends StatelessWidget {
               bgColor: const Color(0xFFFFF1F0), // Pastel coral/red
               iconAsset: 'assets/loc.png',
               onTap: () {
-                // Open My Location
+                Navigator.pushNamed(context, '/street_view');
               },
             ),
             _MapToolCard(
@@ -61,7 +61,7 @@ class MapToolsScreen extends StatelessWidget {
               bgColor: const Color(0xFFF5F6FA), // Pastel grey
               iconAsset: 'assets/dir.png',
               onTap: () {
-                // Open Street View
+                Navigator.pushNamed(context, '/street_view');
               },
             ),
             _MapToolCard(
@@ -70,7 +70,7 @@ class MapToolsScreen extends StatelessWidget {
               bgColor: const Color(0xFFEBF8EA), // Pastel green
               iconAsset: 'assets/icon earth map.png', // Large globe asset resized
               onTap: () {
-                // Open 3D Globe
+                Navigator.pushNamed(context, '/asia');
               },
             ),
             _MapToolCard(
@@ -97,7 +97,7 @@ class MapToolsScreen extends StatelessWidget {
               bgColor: const Color(0xFFFFF1F0), // Pastel red/coral
               iconAsset: 'assets/parking 1.png', // Custom parking icon
               onTap: () {
-                // Open Your Parking
+                Navigator.pushNamed(context, '/parking');
               },
             ),
           ],

@@ -88,7 +88,7 @@ class InformationToolsScreen extends StatelessWidget {
               bgColor: const Color(0xFFFFF1F0), // Pastel pink/coral
               iconAsset: 'assets/lang.png',
               onTap: () {
-                // Open Countries Info
+                Navigator.pushNamed(context, '/countries_info');
               },
             ),
             _InfoToolCard(

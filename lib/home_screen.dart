@@ -55,7 +55,7 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               children: [
                 // ── Premium App Bar ──
-                _buildAppBar(),
+                _buildAppBar(context),
 
                 // ── Scrollable Body ──
                 Expanded(
@@ -141,7 +141,7 @@ class HomeScreen extends StatelessWidget {
                                 context,
                                 'Calculation Tools',
                                 onTap: () {
-                                  Navigator.pushNamed(context, '/map_tools');
+                                  Navigator.pushNamed(context, '/calculation_tools');
                                 },
                               ),
                               const SizedBox(height: 12),
@@ -156,7 +156,7 @@ class HomeScreen extends StatelessWidget {
                                         bgColor: const Color(0xFFF9F0FF), // Soft pastel purple
                                         iconAsset: 'assets/level.png',
                                         onTap: () {
-                                          Navigator.pushNamed(context, '/map_tools');
+                                          Navigator.pushNamed(context, '/altitude_finder');
                                         },
                                       ),
                                     ),
@@ -233,20 +233,23 @@ class HomeScreen extends StatelessWidget {
   }
 
   // ── Premium Top App Bar ──
-  Widget _buildAppBar() {
+  Widget _buildAppBar(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          Image.asset(
-            'assets/menu.png',
-            width: 24,
-            height: 24,
-            color: Colors.white,
-            errorBuilder: (_, __, ___) => const Icon(
-              Icons.menu,
+          GestureDetector(
+            onTap: () => Navigator.pushNamed(context, '/settings'),
+            child: Image.asset(
+              'assets/menu.png',
+              width: 24,
+              height: 24,
               color: Colors.white,
-              size: 26,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.menu,
+                color: Colors.white,
+                size: 26,
+              ),
             ),
           ),
           const SizedBox(width: 14),
@@ -264,7 +267,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // ── Home Location Card ──
+  // ── Home Location Card ──────────────────────────────────────────────────────
   Widget _buildHomeLocationCard() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -299,12 +302,13 @@ class HomeScreen extends StatelessWidget {
                 Text(
                   'Home',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     color: Color(0xFF9CA3AF),
                     fontWeight: FontWeight.w400,
+                    letterSpacing: 0.2,
                   ),
                 ),
-                SizedBox(height: 2),
+                SizedBox(height: 3),
                 Text(
                   'Add Home Location',
                   style: TextStyle(
@@ -335,7 +339,7 @@ class HomeScreen extends StatelessWidget {
   Widget _buildLiveEarthBanner(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        Navigator.pushNamed(context, '/map_tools');
+        Navigator.pushNamed(context, '/cameras');
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -412,6 +416,7 @@ class HomeScreen extends StatelessWidget {
               fontSize: 17,
               fontWeight: FontWeight.w600,
               color: Color(0xFF374151),
+              letterSpacing: -0.1,
             ),
           ),
           GestureDetector(

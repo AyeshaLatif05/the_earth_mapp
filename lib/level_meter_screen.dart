@@ -1,5 +1,3 @@
-// lib/screens/level_meter_screen.dart
-
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
@@ -12,20 +10,25 @@ class LevelMeterScreen extends StatefulWidget {
 
 class _LevelMeterScreenState extends State<LevelMeterScreen> {
   // Coordinates of the floating bubble relative to center (0.0, 0.0)
-  double _xOffset = 0.0;
-  double _yOffset = 0.0;
+  // Positioned at custom starting tilt to match screenshot (-40, -40)
+  double _xOffset = -38.0;
+  double _yOffset = -36.0;
 
   // Maximum drift radius inside the physical indicator
-  static const double _maxRadius = 85.0;
+  static const double _maxRadius = 90.0;
 
   // Calibration offset variables
   double _xCalibration = 0.0;
   double _yCalibration = 0.0;
 
-  bool _showCalibrateDialog = true; // Modal dialog visible by default
+  // Dialog hidden by default to match screenshot and prevent first-launch blocker
+  bool _showCalibrateDialog = false; 
 
-  // High accuracy condition: bubble is close to the center
-  bool get _isHighAccuracy => math.sqrt(_xOffset * _xOffset + _yOffset * _yOffset) < 18.0;
+  // Primary green theme colors matching screenshot precisely
+  final Color _greenRingColor = const Color(0xFF00C853); // Bright vibrant green border ring
+  final Color _mintBgColor = const Color(0xFFDFF0EC);    // Light teal/mint inside circular background
+
+
 
   // Calculate degrees to display on axis cards
   double get _xAxisDegrees {
@@ -38,7 +41,6 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
     return double.parse(raw.clamp(-45.0, 45.0).toStringAsFixed(1));
   }
 
-  // Action to center bubble and calibrate
   void _performCalibration() {
     setState(() {
       _xCalibration = (_xOffset / _maxRadius) * 45.0;
@@ -48,16 +50,17 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
       _showCalibrateDialog = false;
     });
 
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.white),
+            Icon(Icons.check_circle_rounded, color: Colors.white),
             SizedBox(width: 10),
-            Text('Device Calibrated Successfully!'),
+            Text('Calibrated Successfully!'),
           ],
         ),
-        backgroundColor: const Color(0xFF1A7A68),
+        backgroundColor: _greenRingColor,
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
@@ -69,11 +72,12 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = _isHighAccuracy ? const Color(0xFF2E7D32) : const Color(0xFFD32F2F);
-    final statusText = _isHighAccuracy ? 'High Accuracy' : 'Low Accuracy';
+    // Exact screenshot styling: vibrant bright green for "High Accuracy"
+    final statusColor = _greenRingColor;
+    const statusText = 'High Accuracy';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: Colors.white, // Pure white background from screenshot
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -93,17 +97,12 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
         ),
         centerTitle: false,
         actions: [
+          // Eye/Target Outline Icon from top-right of screenshot
           IconButton(
-            icon: Image.asset(
-              'assets/Rotate.png',
-              width: 24,
-              height: 24,
+            icon: const Icon(
+              Icons.remove_red_eye_outlined,
               color: Colors.black,
-              errorBuilder: (_, __, ___) => const Icon(
-                Icons.sync,
-                color: Colors.black,
-                size: 24,
-              ),
+              size: 26,
             ),
             onPressed: () {
               setState(() {
@@ -124,21 +123,19 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
                 children: [
                   const Spacer(),
 
-                  // ── Interactive Bubble Level ──
+                  // ── Interactive Bubble Level Indicator ──
                   GestureDetector(
                     onPanUpdate: (details) {
                       setState(() {
-                        // Drag to simulate tilt drift
+                        // Drag to simulate real-time phone tilting
                         double newX = _xOffset + details.delta.dx;
                         double newY = _yOffset + details.delta.dy;
 
-                        // Constraint inside a circle of _maxRadius
                         double distance = math.sqrt(newX * newX + newY * newY);
                         if (distance <= _maxRadius) {
                           _xOffset = newX;
                           _yOffset = newY;
                         } else {
-                          // Bind to maximum circle boundary edge
                           double angle = math.atan2(newY, newX);
                           _xOffset = _maxRadius * math.cos(angle);
                           _yOffset = _maxRadius * math.sin(angle);
@@ -146,26 +143,28 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
                       });
                     },
                     child: Container(
-                      width: 240,
-                      height: 240,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFE0ECE9), // Soft cyan/grey level background
+                      width: 250,
+                      height: 250,
+                      decoration: BoxDecoration(
+                        color: _mintBgColor,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 16,
-                            offset: Offset(0, 8),
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 10,
+                            spreadRadius: 2,
                           ),
                         ],
                       ),
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // Custom Painter drawing the dynamic green/red arc boundary ring
+                          // ── Beautiful outer closed circular neon-green ring ──
                           Positioned.fill(
                             child: CustomPaint(
-                              painter: _LevelMeterPainter(isHighAccuracy: _isHighAccuracy),
+                              painter: _LevelMeterPainter(
+                                strokeColor: _greenRingColor,
+                              ),
                             ),
                           ),
 
@@ -181,69 +180,49 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
                               ),
                             ),
                           ),
+                          
+                          // Inner target circle
                           Container(
-                            width: 32,
-                            height: 32,
+                            width: 38,
+                            height: 38,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: const Color(0xFF00796B).withOpacity(0.4),
-                                width: 2.0,
+                                color: const Color(0xFF00796B),
+                                width: 2.2,
                               ),
                             ),
                           ),
 
                           // Horizontal center pointer line
                           Container(
-                            width: 1.5,
+                            width: 2,
                             height: 60,
-                            color: const Color(0xFF00796B).withOpacity(0.5),
+                            color: const Color(0xFF00796B),
                           ),
                           Container(
                             width: 60,
-                            height: 1.5,
-                            color: const Color(0xFF00796B).withOpacity(0.5),
+                            height: 2,
+                            color: const Color(0xFF00796B),
                           ),
 
-                          // Floating bubble (dynamically colored based on accuracy)
+                          // Floating bubble (Solid vibrant green dot from screenshot)
                           Transform.translate(
                             offset: Offset(_xOffset, _yOffset),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 15),
-                              width: 38,
-                              height: 38,
+                              width: 32,
+                              height: 32,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                gradient: RadialGradient(
-                                  colors: _isHighAccuracy
-                                      ? [
-                                          const Color(0xFF81C784),
-                                          const Color(0xFF2E7D32),
-                                        ]
-                                      : [
-                                          const Color(0xFFE57373),
-                                          const Color(0xFFD32F2F),
-                                        ],
-                                  center: const Alignment(-0.3, -0.3),
-                                  radius: 0.8,
-                                ),
+                                color: _greenRingColor, // Solid bright green bubble
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.25),
-                                    blurRadius: 5,
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
                                     offset: const Offset(0, 2),
                                   ),
                                 ],
-                              ),
-                              child: Center(
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.4),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
                               ),
                             ),
                           ),
@@ -252,31 +231,31 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 38),
 
-                  // Accuracy Indicator Text (Dynamically Colored)
+                  // Accuracy Indicator Text matching screenshot colors
                   Text(
                     statusText,
                     style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
                       color: statusColor,
-                      letterSpacing: 0.1,
+                      letterSpacing: 0.2,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   const Text(
                     'Place horizontally to adjust the level',
                     style: TextStyle(
-                      fontSize: 15,
-                      color: Color(0xFF6B7280),
+                      fontSize: 16,
+                      color: Color(0xFF111111),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
 
                   const Spacer(),
 
-                  // ── real-time Axis Cards (Row of 2) ──
+                  // ── Real-time Axis Cards (Matching screenshot gray style) ──
                   Row(
                     children: [
                       // X Axis Card
@@ -284,8 +263,7 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
                         child: _AxisCard(
                           label: 'X axis',
                           value: _xAxisDegrees,
-                          iconPath: 'assets/x axis.png',
-                          fallbackIcon: Icons.swap_horiz,
+                          icon: const Icon(Icons.swap_horiz_rounded, color: Color(0xFF1F1F1F), size: 26),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -294,8 +272,7 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
                         child: _AxisCard(
                           label: 'Y axis',
                           value: _yAxisDegrees,
-                          iconPath: 'assets/y axis.png',
-                          fallbackIcon: Icons.swap_vert,
+                          icon: const Icon(Icons.swap_vert_rounded, color: Color(0xFF1F1F1F), size: 26),
                         ),
                       ),
                     ],
@@ -305,7 +282,7 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
               ),
             ),
 
-            // ── Premium Device Calibration Dialog Modal ──
+            // ── Calibration Dialog Modal ──
             if (_showCalibrateDialog)
               Container(
                 color: Colors.black.withOpacity(0.4),
@@ -331,7 +308,6 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Title
                         const Text(
                           'Calibrate your device',
                           style: TextStyle(
@@ -342,8 +318,6 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
-
-                        // Instruction Subtext
                         const Text(
                           'Calibrate your device by moving it in these directions as shown below or by moving it in 8 pattern shape',
                           style: TextStyle(
@@ -354,27 +328,14 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
                           ),
                         ),
                         const SizedBox(height: 28),
-
-                        // Calibration Visual Graphics (Row of 2)
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            // Tilting phone icon
-                            _CalibrationGraphic(
-                              iconPath: 'assets/Rotate.png',
-                              fallbackIcon: Icons.phonelink_setup,
-                            ),
-                            // Rotating phone icon
-                            _CalibrationGraphic(
-                              iconPath: 'assets/Rotate.png',
-                              rotateAngle: math.pi / 2,
-                              fallbackIcon: Icons.screen_rotation,
-                            ),
+                            _buildCalibrationGraphic(Icons.phonelink_setup, 0.0),
+                            _buildCalibrationGraphic(Icons.screen_rotation, math.pi / 2),
                           ],
                         ),
                         const SizedBox(height: 32),
-
-                        // Actions Row (Cancel / Calibrate)
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
@@ -400,10 +361,9 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
                             ElevatedButton(
                               onPressed: _performCalibration,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1A7A68),
+                                backgroundColor: _greenRingColor,
                                 foregroundColor: Colors.white,
                                 elevation: 0,
-                                shadowColor: Colors.transparent,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -429,68 +389,64 @@ class _LevelMeterScreenState extends State<LevelMeterScreen> {
       ),
     );
   }
+
+  Widget _buildCalibrationGraphic(IconData icon, double rotateAngle) {
+    return Transform.rotate(
+      angle: rotateAngle,
+      child: Container(
+        width: 85,
+        height: 85,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Center(
+          child: Icon(
+            icon,
+            color: _greenRingColor,
+            size: 32,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-// ── Custom Painter drawing the green top-arc or solid red boundary circle based on accuracy state ──
+// Custom Painter to draw the bright green closed circle ring precisely
 class _LevelMeterPainter extends CustomPainter {
-  final bool isHighAccuracy;
+  final Color strokeColor;
 
-  _LevelMeterPainter({required this.isHighAccuracy});
+  _LevelMeterPainter({required this.strokeColor});
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final paint = Paint()
-      ..color = isHighAccuracy ? const Color(0xFF0F5C12) : const Color(0xFFD32F2F)
+      ..color = strokeColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 12.0
+      ..strokeWidth = 14.0
       ..strokeCap = StrokeCap.round;
 
-    if (isHighAccuracy) {
-      // High Accuracy Mode: Draw the dark green top arc (First Screenshot)
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: 106),
-        math.pi * 0.95,
-        math.pi * 1.1,
-        false,
-        paint,
-      );
-
-      // Alignment central top notch
-      final notchPaint = Paint()
-        ..color = const Color(0xFF0F5C12)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5;
-
-      canvas.drawLine(
-        Offset(center.dx, center.dy - 106 + 6),
-        Offset(center.dx, center.dy - 106 - 15),
-        notchPaint,
-      );
-    } else {
-      // Low Accuracy Mode: Draw the fully closed thick red boundary ring (Second Screenshot)
-      canvas.drawCircle(center, 106, paint);
-    }
+    // Draw the full, thick closed vibrant green circular boundary ring matching screenshot
+    canvas.drawCircle(center, 110, paint);
   }
 
   @override
   bool shouldRepaint(covariant _LevelMeterPainter oldDelegate) {
-    return oldDelegate.isHighAccuracy != isHighAccuracy;
+    return oldDelegate.strokeColor != strokeColor;
   }
 }
 
-// ── Reusable Axis Degree Card ──
+// Reusable Axis Card matching clean gray styling
 class _AxisCard extends StatelessWidget {
   final String label;
   final double value;
-  final String iconPath;
-  final IconData fallbackIcon;
+  final Widget icon;
 
   const _AxisCard({
     required this.label,
     required this.value,
-    required this.iconPath,
-    required this.fallbackIcon,
+    required this.icon,
   });
 
   @override
@@ -498,28 +454,12 @@ class _AxisCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: const Color(0xFFF3F4F6), // Gray card background from screenshot
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
-          Image.asset(
-            iconPath,
-            width: 28,
-            height: 28,
-            errorBuilder: (_, __, ___) => Icon(
-              fallbackIcon,
-              color: const Color(0xFF1A7A68),
-              size: 24,
-            ),
-          ),
+          icon,
           const SizedBox(width: 14),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,7 +469,7 @@ class _AxisCard extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 12.5,
                   color: Color(0xFF9CA3AF),
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 4),
@@ -537,57 +477,13 @@ class _AxisCard extends StatelessWidget {
                 value.abs().toStringAsFixed(1),
                 style: const TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
                   color: Color(0xFF111111),
                 ),
               ),
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Reusable Calibration Visual Graphic ──
-class _CalibrationGraphic extends StatelessWidget {
-  final String iconPath;
-  final double rotateAngle;
-  final IconData fallbackIcon;
-
-  const _CalibrationGraphic({
-    required this.iconPath,
-    this.rotateAngle = 0.0,
-    required this.fallbackIcon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: rotateAngle,
-      child: Container(
-        width: 85,
-        height: 85,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.grey.withOpacity(0.12),
-            width: 1,
-          ),
-        ),
-        child: Center(
-          child: Image.asset(
-            iconPath,
-            width: 44,
-            height: 44,
-            errorBuilder: (_, __, ___) => Icon(
-              fallbackIcon,
-              color: const Color(0xFF1A7A68),
-              size: 32,
-            ),
-          ),
-        ),
       ),
     );
   }
