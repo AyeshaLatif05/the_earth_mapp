@@ -16,3 +16,6 @@ final mapTypeProvider = StateProvider<MapType>((ref) => MapType.normal);
 
 // State provider managing whether the map traffic layer is enabled
 final trafficLayerProvider = StateProvider<bool>((ref) => false);
+
+// State provider managing the saved home location name
+final homeLocationProvider = StateProvider<String>((ref) => 'Add Home Location');

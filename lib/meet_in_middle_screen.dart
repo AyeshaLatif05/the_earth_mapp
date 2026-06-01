@@ -13,14 +13,26 @@ class MeetInMiddleScreen extends StatefulWidget {
 
 class _MeetInMiddleScreenState extends State<MeetInMiddleScreen> {
   GoogleMapController? _mapController;
+  bool _isRouteSelected = false;
+  Set<Polyline> _polylines = {};
+
 // ── Add this method inside _MeetInMiddleScreenState ──
 
 void _showSelectRouteSheet() {
+  final bool canPopMain = Navigator.canPop(context);
   showModalBottomSheet(
     context: context,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withOpacity(0.5),
-    builder: (context) => const _SelectRouteSheet(),
+    builder: (context) => _SelectRouteSheet(
+      canPopMain: canPopMain,
+      onRouteSelected: () {
+        setState(() {
+          _isRouteSelected = true;
+          _setMarkersWithRoute();
+        });
+      },
+    ),
   );
 }
   // Default camera position (can be dynamic later)
@@ -70,9 +82,35 @@ void _showSelectRouteSheet() {
     );
   }
 
+  void _setMarkersWithRoute() {
+    setState(() {
+      _polylines = {
+        Polyline(
+          polylineId: const PolylineId('route'),
+          points: const [
+            LatLng(41.0438, 29.0067),
+            LatLng(41.0380, 29.0000),
+            LatLng(41.0300, 28.9900),
+          ],
+          color: const Color(0xFF1A7A68),
+          width: 5,
+        ),
+      };
+    });
+  }
+
+  void _clearRoute() {
+    setState(() {
+      _polylines = {};
+    });
+  }
+
   void _onStartNavigation() {
-    // TODO: Launch navigation logic
-    // e.g. open Google Maps with midpoint coordinates
+    Navigator.pushReplacementNamed(
+      context,
+      '/home',
+      arguments: {'showUpdateDialog': true},
+    );
   }
 
   @override
@@ -88,6 +126,7 @@ void _showSelectRouteSheet() {
                 initialCameraPosition: _initialPosition,
                 onMapCreated: (controller) => _mapController = controller,
                 markers: _markers,
+                polylines: _polylines,
                 zoomControlsEnabled: false,
                 myLocationButtonEnabled: false,
                 mapToolbarEnabled: false,
@@ -138,7 +177,18 @@ void _showSelectRouteSheet() {
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_back, color: Color(0xFF111111)),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              if (_isRouteSelected) {
+                setState(() {
+                  _isRouteSelected = false;
+                  _clearRoute();
+                });
+              } else if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                Navigator.pushReplacementNamed(context, '/home');
+              }
+            },
           ),
           const Expanded(
             child: Text(
@@ -317,7 +367,7 @@ Widget _buildStartNavigationButton() {
     width: double.infinity,
     height: 56,
     child: ElevatedButton(
-      onPressed: _showSelectRouteSheet, // <-- now opens the sheet
+      onPressed: _isRouteSelected ? _onStartNavigation : _showSelectRouteSheet,
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF1A7A68),
         foregroundColor: Colors.white,
@@ -326,9 +376,9 @@ Widget _buildStartNavigationButton() {
         ),
         elevation: 0,
       ),
-      child: const Text(
-        'Mark Location in Middle',
-        style: TextStyle(
+      child: Text(
+        _isRouteSelected ? 'Start Navigation' : 'Mark Location in Middle',
+        style: const TextStyle(
           fontSize: 17,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.1,
@@ -348,7 +398,12 @@ Widget _buildStartNavigationButton() {
 // ── Add this as a separate widget at the bottom of the file ──
 
 class _SelectRouteSheet extends StatelessWidget {
-  const _SelectRouteSheet();
+  final bool canPopMain;
+  final VoidCallback onRouteSelected;
+  const _SelectRouteSheet({
+    required this.canPopMain,
+    required this.onRouteSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -397,7 +452,7 @@ class _SelectRouteSheet extends StatelessWidget {
                   textColor: const Color(0xFF1A0000),
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: Draw route to Person A
+                    onRouteSelected();
                   },
                 ),
               ),
@@ -410,7 +465,7 @@ class _SelectRouteSheet extends StatelessWidget {
                   textColor: const Color(0xFF0A1A40),
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: Draw route to Person B
+                    onRouteSelected();
                   },
                 ),
               ),

@@ -128,10 +128,10 @@ class OnboardingScreen extends StatelessWidget {
                           'Navigate the World Smarter',
                           style: TextStyle(
                             fontSize: 26,           // matched to screenshot
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                             color: Colors.black,
-                            height: 1.2,
-                            letterSpacing: -0.3,
+                            
+                          
                           ),
                         ),
                         SizedBox(height: 10),
@@ -154,7 +154,7 @@ class OnboardingScreen extends StatelessWidget {
                       height: 54,
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.pushReplacementNamed(context, '/home');
+                          Navigator.pushReplacementNamed(context, '/meet_in_middle');
                         },
                         style: ElevatedButton.styleFrom(
                           // Exact color from screenshot — darker teal
