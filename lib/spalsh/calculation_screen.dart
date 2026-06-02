@@ -10,43 +10,44 @@ class CalculationToolsScreen extends StatelessWidget {
       title: 'Check Altitude',
       subtitle: 'Explore Earth in an interactive 3D view',
       bgColor: Color(0xFFEDEAF5),
-      iconAsset: 'assets/images/ic_altitude.png',
+      iconAsset: 'assets/level.png',
     ),
     _ToolItem(
       title: 'Find Traffic',
       subtitle: 'See real-time traffic updates on your route',
       bgColor: Color(0xFFFFF8E1),
-      iconAsset: 'assets/images/ic_traffic.png',
+      iconAsset: 'assets/dir.png',
     ),
     _ToolItem(
       title: 'GPS Camera',
       subtitle: 'Save photos with exact location info',
       bgColor: Color(0xFFE3F2FD),
-      iconAsset: 'assets/images/ic_gps_camera.png',
+      iconAsset: 'assets/cam.png',
     ),
     _ToolItem(
       title: 'Find Distance',
       subtitle: 'Shows distance between locations',
       bgColor: Color(0xFFE8F0FB),
-      iconAsset: 'assets/images/ic_find_distance.png',
+      iconAsset: 'assets/distance.png',
     ),
     _ToolItem(
       title: 'World Clock',
       subtitle: 'View the local time for any location worldwide',
       bgColor: Color(0xFFFCE8E8),
-      iconAsset: 'assets/images/ic_world_clock.png',
+      iconAsset: 'assets/clock 1.png',
     ),
     _ToolItem(
       title: 'Near by Places',
       subtitle: 'Shows nearby spots, shops, and attractions',
       bgColor: Color(0xFFEAF4EA),
-      iconAsset: 'assets/images/ic_nearby.png',
+      iconAsset: 'assets/loc.png',
+      iconColor: Color(0xFFE53935), // Red pin to match location pins
     ),
     _ToolItem(
       title: 'Famous Places',
       subtitle: 'Discover landmarks around the globe',
       bgColor: Color(0xFFFFF8EC),
-      iconAsset: 'assets/images/ic_famous_places.png',
+      iconAsset: 'assets/terrain.png',
     ),
   ];
 
@@ -152,6 +153,7 @@ class _ToolCard extends StatelessWidget {
                 tool.iconAsset,
                 width: 64,
                 height: 64,
+                color: tool.iconColor,
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => Container(
                   width: 64,
@@ -198,11 +200,13 @@ class _ToolItem {
   final String subtitle;
   final Color bgColor;
   final String iconAsset;
+  final Color? iconColor;
 
   const _ToolItem({
     required this.title,
     required this.subtitle,
     required this.bgColor,
     required this.iconAsset,
+    this.iconColor,
   });
 }

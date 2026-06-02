@@ -41,7 +41,7 @@ class MapToolsScreen extends StatelessWidget {
               title: '3D Earth Map',
               subtitle: 'Explore the planet using live satellite data',
               bgColor: const Color(0xFFE6F4FF), // Pastel blue
-              iconAsset: 'assets/trav.png',
+              iconAsset: 'assets/terrain.png',
               onTap: () {
                 Navigator.pushNamed(context, '/street_view');
               },
@@ -51,6 +51,7 @@ class MapToolsScreen extends StatelessWidget {
               subtitle: 'Find your current position on the map',
               bgColor: const Color(0xFFFFF1F0), // Pastel coral/red
               iconAsset: 'assets/loc.png',
+              iconColor: const Color(0xFFE53935), // Red pin to match
               onTap: () {
                 Navigator.pushNamed(context, '/street_view');
               },
@@ -59,7 +60,7 @@ class MapToolsScreen extends StatelessWidget {
               title: 'Street View',
               subtitle: 'Explore the planet using live satellite data',
               bgColor: const Color(0xFFF5F6FA), // Pastel grey
-              iconAsset: 'assets/dir.png',
+              iconAsset: 'assets/view.png',
               onTap: () {
                 Navigator.pushNamed(context, '/street_view');
               },
@@ -113,6 +114,7 @@ class _MapToolCard extends StatelessWidget {
   final String subtitle;
   final Color bgColor;
   final String iconAsset;
+  final Color? iconColor;
   final VoidCallback onTap;
 
   const _MapToolCard({
@@ -120,6 +122,7 @@ class _MapToolCard extends StatelessWidget {
     required this.subtitle,
     required this.bgColor,
     required this.iconAsset,
+    this.iconColor,
     required this.onTap,
   });
 
@@ -143,6 +146,7 @@ class _MapToolCard extends StatelessWidget {
                 iconAsset,
                 width: 44,
                 height: 44,
+                color: iconColor,
                 errorBuilder: (_, __, ___) => Container(
                   width: 44,
                   height: 44,

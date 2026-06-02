@@ -11,23 +11,36 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _rotationController;
 
   @override
   void initState() {
     super.initState();
+    _rotationController = AnimationController(
+      duration: const Duration(seconds: 45),
+      vsync: this,
+    )..repeat();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null && args['showUpdateDialog'] == true) {
         _showUpdatePlaceNameDialog();
       }
     });
   }
 
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
+  }
+
   void _showUpdatePlaceNameDialog() {
     final TextEditingController controller = TextEditingController(
       text: ref.read(homeLocationProvider) == 'Add Home Location'
-          ? 'Location here, Rawalpindi, Pakistan'
+          ? ''
           : ref.read(homeLocationProvider),
     );
 
@@ -73,7 +86,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     controller: controller,
                     decoration: const InputDecoration(
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
                     style: const TextStyle(
                       fontSize: 15,
@@ -103,7 +117,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ElevatedButton(
                       onPressed: () {
                         if (controller.text.trim().isNotEmpty) {
-                          ref.read(homeLocationProvider.notifier).state = controller.text.trim();
+                          ref.read(homeLocationProvider.notifier).state =
+                              controller.text.trim();
                         }
                         Navigator.pop(context);
                       },
@@ -114,7 +129,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
                       ),
                       child: const Text(
                         'Save',
@@ -137,70 +153,105 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E2A), // Deep dark indigo background
+      backgroundColor: const Color(0xFF0A0E2A),
       body: Stack(
         children: [
-          // ── Beautiful Globe Backdrop peeking from top ──
+          // ── Globe backdrop — centered, large, top-anchored ──
           Positioned(
-            top: -40,
+            top: -10,
             left: 0,
             right: 0,
             height: 320,
             child: ShaderMask(
               shaderCallback: (rect) {
-                return LinearGradient(
+                return const LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.black,
-                    Colors.black.withOpacity(0.9),
-                    Colors.black.withOpacity(0.1),
+                    Colors.black,
+                    Color(0xCC000000),
+                    Color(0x44000000),
                     Colors.transparent,
                   ],
-                  stops: const [0.0, 0.4, 0.85, 1.0],
+                  stops: [0.0, 0.35, 0.6, 0.82, 1.0],
                 ).createShader(Rect.fromLTRB(0, 0, rect.width, rect.height));
               },
               blendMode: BlendMode.dstIn,
-              child: Image.asset(
-                'assets/icon earth map.png',
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.transparent,
-                    child: const Icon(
-                      Icons.public,
-                      size: 180,
-                      color: Color(0xFF1E88E5),
-                    ),
-                  );
-                },
+              child: RotationTransition(
+                turns: _rotationController,
+                child: Image.asset(
+                  'assets/Globe Component.png',
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                ),
               ),
             ),
           ),
 
-          // ── Scrollable content area ──
+          // ── Dark-to-transparent overlay so globe blends into bg ──
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 400,
+            child: IgnorePointer(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFF01001F), // solid dark at very top
+                      Color(0x8821203B), // semi-dark mid
+                      Color(0x33414057), // lighter
+                      Color(0x00FFFFFF), // transparent
+                    ],
+                    stops: [0.0, 0.40, 0.70, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // ── Main content ──
           SafeArea(
             bottom: false,
             child: Column(
               children: [
-                // ── Premium App Bar ──
+                // App bar
                 _buildAppBar(context),
+                const SizedBox(height: 8),
 
-                // ── Scrollable Body ──
+                // Scrollable body
                 Expanded(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Space to showcase the beautiful earth globe graphic
-                        const SizedBox(height: 70),
+                        // Globe spacer — matches globe visual height
+                        const SizedBox(height: 130),
 
-                        // ── Main Content Sheet (White Background) ──
+                        // ── Home Location Card ──
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: _buildHomeLocationCard(),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // ── Live Earth Banner ──
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: _buildLiveEarthBanner(context),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // ── White content sheet ──
                         Container(
                           width: double.infinity,
                           decoration: const BoxDecoration(
-                            color: Color(0xFFF5F6FA), // Sleek, light grey/white background
+                            color: Color(0xFFF5F6FA),
                             borderRadius: BorderRadius.vertical(
                               top: Radius.circular(24),
                             ),
@@ -208,143 +259,134 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 22),
 
-                              // ── Home Location Card ──
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: _buildHomeLocationCard(),
-                              ),
-                              const SizedBox(height: 12),
-
-                              // ── Live Earth Map Promotional Card ──
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: _buildLiveEarthBanner(context),
-                              ),
-                              const SizedBox(height: 24),
-
-                              // ── Map Tools Section ──
+                              // Map Tools
                               _buildSectionHeader(
                                 context,
                                 'Map Tools',
-                                onTap: () {
-                                  Navigator.pushNamed(context, '/map_tools');
-                                },
+                                onTap: () => Navigator.pushNamed(
+                                    context, '/map_tools'),
                               ),
                               const SizedBox(height: 12),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16),
                                 child: Row(
                                   children: [
                                     Expanded(
                                       child: _ToolCard(
                                         title: '3D Earth Map',
-                                        subtitle: 'Explore the planet using live satellite data',
-                                        bgColor: const Color(0xFFE6F4FF), // Soft pastel blue
-                                        iconAsset: 'assets/trav.png',
-                                        onTap: () {
-                                          Navigator.pushNamed(context, '/map_tools');
-                                        },
+                                        subtitle:
+                                            'Explore the planet using live satellite data',
+                                        bgColor: const Color(0xFFE6F4FF),
+                                        iconAsset: 'assets/image 21.png',
+                                        onTap: () => Navigator.pushNamed(
+                                            context, '/map_tools'),
                                       ),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: _ToolCard(
                                         title: 'My Location',
-                                        subtitle: 'Find your current position on the map',
-                                        bgColor: const Color(0xFFFFF1F0), // Soft pastel coral/red
+                                        subtitle:
+                                            'Find your current position on the map',
+                                        bgColor: const Color(0xFFFFF1F0),
                                         iconAsset: 'assets/loc.png',
-                                        onTap: () {
-                                          Navigator.pushNamed(context, '/map_tools');
-                                        },
+                                        iconColor: const Color(0xFFE53935),
+                                        onTap: () => Navigator.pushNamed(
+                                            context, '/map_tools'),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 22),
 
-                              // ── Calculation Tools Section ──
+                              // Calculation Tools
                               _buildSectionHeader(
                                 context,
                                 'Calculation Tools',
-                                onTap: () {
-                                  Navigator.pushNamed(context, '/calculation_tools');
-                                },
+                                onTap: () => Navigator.pushNamed(
+                                    context, '/calculation_tools'),
                               ),
                               const SizedBox(height: 12),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16),
                                 child: Row(
                                   children: [
                                     Expanded(
                                       child: _ToolCard(
                                         title: 'Check Altitude',
-                                        subtitle: 'Explore Earth in an interactive 3D view',
-                                        bgColor: const Color(0xFFF9F0FF), // Soft pastel purple
-                                        iconAsset: 'assets/level.png',
-                                        onTap: () {
-                                          Navigator.pushNamed(context, '/altitude_finder');
-                                        },
+                                        subtitle:
+                                            'Explore Earth in an interactive 3D view',
+                                        bgColor: const Color(0xFFF3EEFF),
+                                        iconAsset: 'assets/image 10.png',
+                                        onTap: () => Navigator.pushNamed(
+                                            context, '/altitude_finder'),
                                       ),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: _ToolCard(
                                         title: 'Find Traffic',
-                                        subtitle: 'See real-time traffic updates on your route',
-                                        bgColor: const Color(0xFFFEFBE8), // Soft pastel yellow
+                                        subtitle:
+                                            'See real-time traffic updates on your route',
+                                        bgColor: const Color(0xFFFEFBE8),
                                         iconAsset: 'assets/dir.png',
-                                        onTap: () {
-                                          Navigator.pushNamed(context, '/map_tools');
-                                        },
+                                        onTap: () => Navigator.pushNamed(
+                                            context, '/map_tools'),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 22),
 
-                              // ── Information Tools Section ──
+                              // Information Tools
                               _buildSectionHeader(
                                 context,
                                 'Information Tools',
-                                onTap: () {
-                                  Navigator.pushNamed(context, '/information_tools');
-                                },
+                                onTap: () => Navigator.pushNamed(
+                                    context, '/information_tools'),
                               ),
                               const SizedBox(height: 12),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16),
                                 child: Row(
                                   children: [
                                     Expanded(
                                       child: _ToolCard(
                                         title: 'Live Sensor',
-                                        subtitle: 'Real-time data from your device sensors',
-                                        bgColor: const Color(0xFFFFF0E6), // Soft pastel orange
+                                        subtitle:
+                                            'Real-time data from your device sensors',
+                                        bgColor: const Color(0xFFFFF0E6),
                                         iconAsset: 'assets/speed.png',
-                                        onTap: () {
-                                          Navigator.pushNamed(context, '/information_tools');
-                                        },
+                                        iconColor: const Color(0xFFE65100),
+                                        onTap: () => Navigator.pushNamed(
+                                            context, '/information_tools'),
                                       ),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: _ToolCard(
                                         title: 'Oxygen Level',
-                                        subtitle: 'Monitor oxygen level and air quality',
-                                        bgColor: const Color(0xFFF0F5FF), // Soft pastel blue/grey
-                                        iconAsset: 'assets/windy.png',
-                                        onTap: () {
-                                          Navigator.pushNamed(context, '/oxygen_level');
-                                        },
+                                        subtitle:
+                                            'Monitor oxygen level and air quality',
+                                        bgColor: const Color(0xFFF0F5FF),
+                                        iconAsset: 'assets/image 14.png',
+                                        iconColor: const Color(0xFF1E88E5),
+                                        onTap: () => Navigator.pushNamed(
+                                            context, '/oxygen_level'),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
+
+                              // Bottom padding for safe area / nav bar
                               const SizedBox(height: 32),
                             ],
                           ),
@@ -361,10 +403,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // ── Premium Top App Bar ──
+  // ── App Bar ──
   Widget _buildAppBar(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
         children: [
           GestureDetector(
@@ -388,7 +430,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: Colors.white,
-              letterSpacing: -0.2,
+              letterSpacing: -0.3,
             ),
           ),
         ],
@@ -396,9 +438,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // ── Home Location Card ──────────────────────────────────────────────────────
+  // ── Home Location Card ──
   Widget _buildHomeLocationCard() {
     final homeLoc = ref.watch(homeLocationProvider);
+    final bool isEmpty = homeLoc == 'Add Home Location';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -406,28 +449,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.07),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
         children: [
+          // Red location pin
           Image.asset(
             'assets/loc.png',
             width: 28,
             height: 28,
+            color: const Color(0xFFE53935),
             errorBuilder: (_, __, ___) => const Icon(
               Icons.location_on,
               color: Color(0xFFE53935),
-              size: 24,
+              size: 28,
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
                   'Home',
@@ -435,7 +481,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     fontSize: 11,
                     color: Color(0xFF9CA3AF),
                     fontWeight: FontWeight.w400,
-                    letterSpacing: 0.2,
+                    letterSpacing: 0.3,
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -444,22 +490,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: homeLoc == 'Add Home Location' ? const Color(0xFF6B7280) : const Color(0xFF111111),
+                    color: isEmpty
+                        ? const Color(0xFF6B7280)
+                        : const Color(0xFF111111),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
           GestureDetector(
             onTap: _showUpdatePlaceNameDialog,
-            child: Image.asset(
-              'assets/edit-2.png',
-              width: 20,
-              height: 20,
-              errorBuilder: (_, __, ___) => const Icon(
-                Icons.edit_outlined,
-                color: Color(0xFF6B7280),
-                size: 20,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Image.asset(
+                'assets/edit-2.png',
+                width: 20,
+                height: 20,
+                color: const Color(0xFF6B7280),
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.edit_outlined,
+                  color: Color(0xFF6B7280),
+                  size: 20,
+                ),
               ),
             ),
           ),
@@ -468,13 +522,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // ── Live Earth Banner Card ──
+  // ── Live Earth Banner ──
   Widget _buildLiveEarthBanner(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(context, '/cameras');
-      },
+      onTap: () => Navigator.pushNamed(context, '/cameras'),
       child: Container(
+        width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
@@ -488,8 +541,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF1E7E6C).withOpacity(0.2),
-              blurRadius: 10,
+              color: const Color(0xFF1A7A68).withOpacity(0.3),
+              blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
@@ -499,6 +552,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Live Earth Map',
@@ -506,28 +560,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
-                      letterSpacing: -0.2,
+                      letterSpacing: -0.3,
                     ),
                   ),
                   SizedBox(height: 6),
                   Text(
                     'Explore Live Cameras and ...',
                     style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white70,
+                      fontSize: 19,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                 ],
               ),
             ),
             Image.asset(
-              'assets/cam.png',
-              width: 52,
-              height: 52,
+              'assets/image 1.png',
+              scale:4,
+              
               errorBuilder: (_, __, ___) => const Icon(
                 Icons.videocam_outlined,
                 color: Colors.white70,
-                size: 44,
+                size: 48,
               ),
             ),
           ],
@@ -537,7 +592,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   // ── Section Header ──
-  Widget _buildSectionHeader(BuildContext context, String title, {required VoidCallback onTap}) {
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title, {
+    required VoidCallback onTap,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
@@ -554,18 +613,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           GestureDetector(
             onTap: onTap,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              child: Image.asset(
-                'assets/chevron-right.png',
-                width: 20,
-                height: 20,
-                color: const Color(0xFF6B7280),
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.chevron_right,
-                  color: Color(0xFF6B7280),
-                  size: 22,
-                ),
+            child: Image.asset(
+              'assets/chevron-right.png',
+              width: 20,
+              height: 20,
+              color: const Color(0xFF6B7280),
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.chevron_right,
+                color: Color(0xFF6B7280),
+                size: 22,
               ),
             ),
           ),
@@ -575,12 +631,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-// ── Reusable Tool Card Widget ──
+// ── Tool Card ──
 class _ToolCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final Color bgColor;
   final String iconAsset;
+  final Color? iconColor;
   final VoidCallback onTap;
 
   const _ToolCard({
@@ -588,6 +645,7 @@ class _ToolCard extends StatelessWidget {
     required this.subtitle,
     required this.bgColor,
     required this.iconAsset,
+    this.iconColor,
     required this.onTap,
   });
 
@@ -596,45 +654,47 @@ class _ToolCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 165,
-        padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+        height: 160,
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Stack(
           children: [
-            // Align Icon to top right
+            // Icon — top right
             Positioned(
               top: 0,
               right: 0,
               child: Image.asset(
                 iconAsset,
-                width: 44,
-                height: 44,
+                width: 48,
+                height: 48,
+                color: iconColor,
                 errorBuilder: (_, __, ___) => Container(
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withOpacity(0.4),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
                     Icons.image_outlined,
                     color: Colors.grey,
-                    size: 22,
+                    size: 24,
                   ),
                 ),
               ),
             ),
 
-            // Text content aligned to bottom start
+            // Title + subtitle — bottom left
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     title,
@@ -647,7 +707,7 @@ class _ToolCard extends StatelessWidget {
                       height: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 5),
                   Text(
                     subtitle,
                     maxLines: 2,
@@ -655,7 +715,7 @@ class _ToolCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 11.5,
                       color: Color(0xFF6B7280),
-                      height: 1.3,
+                      height: 1.35,
                     ),
                   ),
                 ],

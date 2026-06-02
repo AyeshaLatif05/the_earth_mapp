@@ -10,43 +10,44 @@ class MapToolsScreen extends StatelessWidget {
       title: '3D Earth Map',
       subtitle: 'Explore the planet using live satellite data',
       bgColor: Color(0xFFDFF0FB),
-      iconAsset: 'assets/images/ic_3d_map.png',
+      iconAsset: 'assets/terrain.png',
     ),
     _ToolItem(
       title: 'My Location',
       subtitle: 'Find your current position on the map',
       bgColor: Color(0xFFFDE8E8),
-      iconAsset: 'assets/images/ic_my_location.png',
+      iconAsset: 'assets/loc.png',
+      iconColor: Color(0xFFE53935), // Red pin to match location pins
     ),
     _ToolItem(
       title: 'Street View',
       subtitle: 'Explore the planet using live satellite data',
       bgColor: Color(0xFFF0F0F0),
-      iconAsset: 'assets/images/ic_street_view.png',
+      iconAsset: 'assets/view.png',
     ),
     _ToolItem(
       title: '3D Globe',
       subtitle: 'Explore Earth in an interactive 3D view',
       bgColor: Color(0xFFEAF5EA),
-      iconAsset: 'assets/images/ic_3d_globe.png',
+      iconAsset: 'assets/icon earth map.png',
     ),
     _ToolItem(
       title: 'Meet in Middle',
       subtitle: 'Discover a midpoint between locations',
       bgColor: Color(0xFFFCECEC),
-      iconAsset: 'assets/images/ic_meet_middle.png',
+      iconAsset: 'assets/Frame.png',
     ),
     _ToolItem(
       title: 'Voice Navigation',
       subtitle: 'Let voice guide you on your route',
       bgColor: Color(0xFFFFFBE6),
-      iconAsset: 'assets/images/ic_voice_nav.png',
+      iconAsset: 'assets/Rotate.png',
     ),
     _ToolItem(
       title: 'Your Parking',
       subtitle: 'Stores your parking spot for quick access',
       bgColor: Color(0xFFFDE8E8),
-      iconAsset: 'assets/images/ic_parking.png',
+      iconAsset: 'assets/parking 1.png',
     ),
   ];
 
@@ -131,6 +132,7 @@ class _ToolCard extends StatelessWidget {
                 tool.iconAsset,
                 width: 64,
                 height: 64,
+                color: tool.iconColor,
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => Container(
                   width: 64,
@@ -177,11 +179,13 @@ class _ToolItem {
   final String subtitle;
   final Color bgColor;
   final String iconAsset;
+  final Color? iconColor;
 
   const _ToolItem({
     required this.title,
     required this.subtitle,
     required this.bgColor,
     required this.iconAsset,
+    this.iconColor,
   });
 }
