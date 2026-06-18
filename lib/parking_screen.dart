@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'services/firebase_service.dart';
 
 class ParkingScreen extends StatefulWidget {
   const ParkingScreen({super.key});
@@ -62,13 +63,53 @@ class _ParkingScreenState extends State<ParkingScreen> {
     });
   }
 
-  void _saveParkingSpot() {
+  void _saveParkingSpot() async {
     final currentMarker = _markers.firstWhere(
       (m) => m.markerId.value == 'current_location',
       orElse: () => const Marker(markerId: MarkerId('')),
     );
 
     if (currentMarker.markerId.value.isEmpty) return;
+
+    final name = _searchController.text.trim().isNotEmpty
+        ? _searchController.text.trim()
+        : 'Parked Spot';
+    final location = _currentAddress;
+    final latitude = currentMarker.position.latitude;
+    final longitude = currentMarker.position.longitude;
+
+    // Show loading spinner
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF1E8278),
+        ),
+      ),
+    );
+
+    try {
+      await FirebaseService.instance.saveParkingSpot(
+        name: name,
+        location: location,
+        latitude: latitude,
+        longitude: longitude,
+      );
+      if (mounted) Navigator.pop(context); // Dismiss loading spinner
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Dismiss loading spinner
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save parking spot: $e'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
 
     setState(() {
       _parkedLocation = currentMarker.position;
@@ -82,6 +123,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
       );
     });
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Row(
@@ -171,18 +213,13 @@ class _ParkingScreenState extends State<ParkingScreen> {
             icon: const Icon(Icons.list, color: Color(0xFF111111)),
             onPressed: () async {
               final result = await Navigator.pushNamed(context, '/saved_parkings');
-              if (result != null && result is Map<String, String>) {
+              if (result != null && result is Map<String, dynamic>) {
                 final name = result['name'] ?? 'Parking Spot';
                 final address = result['location'] ?? '';
                 
-                LatLng newPos = const LatLng(41.0438, 29.0067);
-                if (result['id'] == '3') {
-                  newPos = const LatLng(33.7077, 73.0498);
-                } else if (result['id'] == '4') {
-                  newPos = const LatLng(33.6394, 73.0691);
-                } else if (result['id'] == '2') {
-                  newPos = const LatLng(41.0450, 29.0080);
-                }
+                final double lat = (result['latitude'] as num?)?.toDouble() ?? 41.0438;
+                final double lng = (result['longitude'] as num?)?.toDouble() ?? 29.0067;
+                final LatLng newPos = LatLng(lat, lng);
                 
                 setState(() {
                   _markers.clear();

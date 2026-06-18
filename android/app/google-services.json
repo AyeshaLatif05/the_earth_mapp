@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "456632748430",
+    "project_id": "theearthmap-a3693",
+    "storage_bucket": "theearthmap-a3693.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:456632748430:android:e8dee1d2c255db8bd63cdf",
+        "android_client_info": {
+          "package_name": "com.example.live_earth_map"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCz1-C4gwspMaDNwJknygSND_YQnR_NcTo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

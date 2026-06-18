@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:live_earth_map/meet_in_middle_screen.dart';
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
@@ -154,7 +153,7 @@ class OnboardingScreen extends StatelessWidget {
                       height: 54,
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.pushReplacementNamed(context, '/meet_in_middle');
+                          Navigator.pushReplacementNamed(context, '/home');
                         },
                         style: ElevatedButton.styleFrom(
                           // Exact color from screenshot — darker teal

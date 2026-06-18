@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'home_screen.dart';
 import 'information_tools_screen.dart';
 import 'map_tools_screen.dart';
@@ -21,8 +23,21 @@ import 'asia_screen.dart';
 import 'countries_info_screen.dart';
 import 'settings_screen.dart';
 import 'feedback_screen.dart';
+import 'live_sensor_screen.dart';
+import 'speedometer_screen.dart';
+import 'compass_screen.dart';
+import 'live_weather_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint("Firebase successfully connected and initialized!");
+  } catch (e) {
+    debugPrint("Firebase initialization failed: $e");
+  }
   runApp(
     const ProviderScope(
       child: MyApp(),
@@ -79,6 +94,10 @@ class MyApp extends StatelessWidget {
         '/countries_info': (context) => const CountriesInfoScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/feedback': (context) => const FeedbackScreen(),
+        '/live_sensor': (context) => const LiveSensorScreen(),
+        '/speedometer': (context) => const SpeedometerScreen(),
+        '/compass': (context) => const CompassScreen(),
+        '/live_weather': (context) => const LiveWeatherScreen(),
       },
     );
   }

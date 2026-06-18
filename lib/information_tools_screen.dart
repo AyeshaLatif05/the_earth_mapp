@@ -43,7 +43,7 @@ class InformationToolsScreen extends StatelessWidget {
               bgColor: const Color(0xFFFFF0E6), // Pastel orange
               iconAsset: 'assets/speed.png',
               onTap: () {
-                // Open Live Sensor
+                Navigator.pushNamed(context, '/live_sensor');
               },
             ),
             _InfoToolCard(
@@ -61,7 +61,7 @@ class InformationToolsScreen extends StatelessWidget {
               bgColor: const Color(0xFFEBF8EA), // Pastel green
               iconAsset: 'assets/speed.png',
               onTap: () {
-                // Open Speedometer
+                Navigator.pushNamed(context, '/speedometer');
               },
             ),
             _InfoToolCard(
@@ -70,7 +70,7 @@ class InformationToolsScreen extends StatelessWidget {
               bgColor: const Color(0xFFE3F2FD), // Pastel cyan
               iconAsset: 'assets/Rotate.png',
               onTap: () {
-                // Open Compass
+                Navigator.pushNamed(context, '/compass');
               },
             ),
             _InfoToolCard(
@@ -79,7 +79,7 @@ class InformationToolsScreen extends StatelessWidget {
               bgColor: const Color(0xFFE8F4FD), // Pastel light blue
               iconAsset: 'assets/weath.png',
               onTap: () {
-                // Open Live Weather
+                Navigator.pushNamed(context, '/live_weather');
               },
             ),
             _InfoToolCard(

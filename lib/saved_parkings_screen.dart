@@ -1,6 +1,5 @@
-// lib/saved_parkings_screen.dart
-
 import 'package:flutter/material.dart';
+import 'services/firebase_service.dart';
 
 class SavedParkingsScreen extends StatefulWidget {
   const SavedParkingsScreen({super.key});
@@ -14,181 +13,171 @@ class _SavedParkingsScreenState extends State<SavedParkingsScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearchExpanded = false;
 
-  // Mock list of saved parkings matching the mockup
-  final List<Map<String, String>> _allParkings = [
-    {
-      'id': '1',
-      'name': 'Parking Name',
-      'location': 'Location here, Rawalpindi, Pakistan',
-    },
-    {
-      'id': '2',
-      'name': 'Parking Name',
-      'location': 'Location here, Rawalpindi, Pakistan',
-    },
-    {
-      'id': '3',
-      'name': 'Centaurus Mall Parking',
-      'location': 'F-8, Islamabad, Pakistan',
-    },
-    {
-      'id': '4',
-      'name': 'Commercial Market Parking',
-      'location': 'Satellite Town, Rawalpindi, Pakistan',
-    },
-  ];
-
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
-  List<Map<String, String>> _getFilteredParkings() {
-    if (_searchQuery.isEmpty) {
-      return _allParkings;
-    }
-    return _allParkings
-        .where((p) =>
-            p['name']!.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            p['location']!.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final filteredParkings = _getFilteredParkings();
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leadingWidth: 48,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 8.0),
-          child: IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: Colors.black,
-              size: 22,
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: FirebaseService.instance.getParkingSpotStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: Colors.white,
+            body: Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFF1E8278),
+              ),
             ),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        title: _isSearchExpanded
-            ? Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(12),
+          );
+        }
+
+        final allParkings = snapshot.data ?? [];
+        final filteredParkings = allParkings.where((p) {
+          final name = (p['name'] ?? '').toString().toLowerCase();
+          final loc = (p['location'] ?? '').toString().toLowerCase();
+          final query = _searchQuery.toLowerCase();
+          return name.contains(query) || loc.contains(query);
+        }).toList();
+
+        return Scaffold(
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            leadingWidth: 48,
+            leading: Padding(
+              padding: const EdgeInsets.only(left: 8.0),
+              child: IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Colors.black,
+                  size: 22,
                 ),
-                child: TextField(
-                  controller: _searchController,
-                  autofocus: true,
-                  onChanged: (val) {
-                    setState(() {
-                      _searchQuery = val;
-                    });
-                  },
-                  style: const TextStyle(fontSize: 15, color: Colors.black),
-                  decoration: InputDecoration(
-                    hintText: 'Search parkings...',
-                    hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
-                    border: InputBorder.none,
-                    prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.close, size: 16, color: Colors.grey),
-                      onPressed: () {
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            title: _isSearchExpanded
+                ? Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      autofocus: true,
+                      onChanged: (val) {
                         setState(() {
-                          _searchController.clear();
-                          _searchQuery = '';
-                          _isSearchExpanded = false;
+                          _searchQuery = val;
                         });
                       },
+                      style: const TextStyle(fontSize: 15, color: Colors.black),
+                      decoration: InputDecoration(
+                        hintText: 'Search parkings...',
+                        hintStyle: const TextStyle(
+                            color: Color(0xFF9CA3AF), fontSize: 14),
+                        border: InputBorder.none,
+                        prefixIcon: const Icon(Icons.search,
+                            size: 18, color: Colors.grey),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.close,
+                              size: 16, color: Colors.grey),
+                          onPressed: () {
+                            setState(() {
+                              _searchController.clear();
+                              _searchQuery = '';
+                              _isSearchExpanded = false;
+                            });
+                          },
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  )
+                : const Text(
+                    'Saved Parkings',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                      letterSpacing: -0.2,
+                    ),
                   ),
+            centerTitle: false,
+            actions: [
+              if (!_isSearchExpanded)
+                IconButton(
+                  icon: const Icon(
+                    Icons.search_rounded,
+                    color: Colors.black,
+                    size: 26,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isSearchExpanded = true;
+                    });
+                  },
                 ),
-              )
-            : const Text(
-                'Saved Parkings',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                  letterSpacing: -0.2,
+              const SizedBox(width: 8),
+            ],
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Expanded(
+                  child: filteredParkings.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.local_parking_rounded,
+                                size: 64,
+                                color: Colors.grey[300],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                _searchQuery.isEmpty
+                                    ? 'No saved parkings yet'
+                                    : 'No results found for "$_searchQuery"',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[500],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: filteredParkings.length,
+                          separatorBuilder: (context, index) => const Divider(
+                            color: Color(0xFFF3F4F6),
+                            height: 1,
+                            thickness: 1,
+                          ),
+                          itemBuilder: (context, index) {
+                            final parking = filteredParkings[index];
+                            return _buildParkingTile(parking);
+                          },
+                        ),
                 ),
-              ),
-        centerTitle: false,
-        actions: [
-          if (!_isSearchExpanded)
-            IconButton(
-              icon: const Icon(
-                Icons.search_rounded,
-                color: Colors.black,
-                size: 26,
-              ),
-              onPressed: () {
-                setState(() {
-                  _isSearchExpanded = true;
-                });
-              },
+              ],
             ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 12),
-            Expanded(
-              child: filteredParkings.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.local_parking_rounded,
-                            size: 64,
-                            color: Colors.grey[300],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _searchQuery.isEmpty
-                                ? 'No saved parkings yet'
-                                : 'No results found for "$_searchQuery"',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey[500],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: filteredParkings.length,
-                      separatorBuilder: (context, index) => const Divider(
-                        color: Color(0xFFF3F4F6),
-                        height: 1,
-                        thickness: 1,
-                      ),
-                      itemBuilder: (context, index) {
-                        final parking = filteredParkings[index];
-                        return _buildParkingTile(parking);
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildParkingTile(Map<String, String> parking) {
+  Widget _buildParkingTile(Map<String, dynamic> parking) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 4.0),
       child: Row(
@@ -214,7 +203,7 @@ class _SavedParkingsScreenState extends State<SavedParkingsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  parking['name']!,
+                  parking['name'] ?? 'Parking Spot',
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
@@ -224,7 +213,7 @@ class _SavedParkingsScreenState extends State<SavedParkingsScreen> {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  parking['location']!,
+                  parking['location'] ?? '',
                   style: const TextStyle(
                     fontSize: 13.5,
                     color: Color(0xFF888888),
@@ -252,7 +241,7 @@ class _SavedParkingsScreenState extends State<SavedParkingsScreen> {
     );
   }
 
-  void _showOptionsSheet(Map<String, String> parking) {
+  void _showOptionsSheet(Map<String, dynamic> parking) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -268,9 +257,10 @@ class _SavedParkingsScreenState extends State<SavedParkingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Text(
-                    parking['name']!,
+                    parking['name'] ?? 'Parking Spot',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -280,8 +270,10 @@ class _SavedParkingsScreenState extends State<SavedParkingsScreen> {
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.map_outlined, color: Color(0xFF1E8278)),
-                  title: const Text('Show on Map', style: TextStyle(fontWeight: FontWeight.w600)),
+                  leading:
+                      const Icon(Icons.map_outlined, color: Color(0xFF1E8278)),
+                  title: const Text('Show on Map',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(context);
                     // Pop saved parking screen and optionally return position to map
@@ -289,35 +281,58 @@ class _SavedParkingsScreenState extends State<SavedParkingsScreen> {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.share_outlined, color: Color(0xFF1E8278)),
-                  title: const Text('Share Location', style: TextStyle(fontWeight: FontWeight.w600)),
+                  leading: const Icon(Icons.share_outlined,
+                      color: Color(0xFF1E8278)),
+                  title: const Text('Share Location',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Copied location to clipboard: ${parking['location']}'),
+                        content: Text(
+                            'Copied location to clipboard: ${parking['location']}'),
                         behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                     );
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                  title: const Text('Delete Parking Spot', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
-                  onTap: () {
-                    setState(() {
-                      _allParkings.removeWhere((p) => p['id'] == parking['id']);
-                    });
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Parking spot deleted.'),
-                        behavior: SnackBarBehavior.floating,
-                        backgroundColor: Colors.redAccent,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    );
+                  leading:
+                      const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  title: const Text('Delete Parking Spot',
+                      style: TextStyle(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.w600)),
+                  onTap: () async {
+                    final String? docId = parking['id'] as String?;
+                    if (docId != null) {
+                      try {
+                        await FirebaseService.instance.deleteParkingSpot(docId);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to delete: $e'),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                        }
+                      }
+                    }
+                    if (context.mounted) Navigator.pop(context);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Parking spot deleted.'),
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: Colors.redAccent,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                        ),
+                      );
+                    }
                   },
                 ),
               ],

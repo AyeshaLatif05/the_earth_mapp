@@ -42,6 +42,55 @@ class _StreetViewScreenState extends State<StreetViewScreen> {
     );
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    if (args != null && args.containsKey('locationName')) {
+      final name = args['locationName'] as String;
+      if (name != _placeName && name.isNotEmpty) {
+        _placeName = name;
+        LatLng locationCoords = _besiktasLatLng;
+        
+        // Lookup coordinate of target cities
+        final lowerName = name.toLowerCase();
+        if (lowerName.contains('new york')) {
+          locationCoords = const LatLng(40.7128, -74.0060);
+        } else if (lowerName.contains('london')) {
+          locationCoords = const LatLng(51.5074, -0.1278);
+        } else if (lowerName.contains('paris')) {
+          locationCoords = const LatLng(48.8566, 2.3522);
+        } else if (lowerName.contains('tokyo')) {
+          locationCoords = const LatLng(35.6762, 139.6503);
+        } else if (lowerName.contains('istanbul')) {
+          locationCoords = const LatLng(41.0082, 28.9784);
+        } else if (lowerName.contains('my location')) {
+          locationCoords = const LatLng(37.4275, -122.1697); // Palo Alto Googleplex
+        } else {
+          // Fallback hash-based coordinate simulation
+          final double lat = 41.0438 + (name.hashCode % 1000) / 10000.0 - 0.05;
+          final double lng = 29.0067 + ((name.hashCode >> 2) % 1000) / 10000.0 - 0.05;
+          locationCoords = LatLng(lat, lng);
+        }
+        
+        _currentLocation = locationCoords;
+        _markers.clear();
+        _markers.add(
+          Marker(
+            markerId: const MarkerId('street_view_pos'),
+            position: _currentLocation,
+            infoWindow: InfoWindow(
+              title: _placeName,
+              snippet: 'Lat: ${_currentLocation.latitude.toStringAsFixed(4)}, Lng: ${_currentLocation.longitude.toStringAsFixed(4)}',
+            ),
+          ),
+        );
+        
+        _selectedPanoramaIndex = name.hashCode.abs() % _panoramas.length;
+      }
+    }
+  }
+
   void _onMapTapped(LatLng position) {
     setState(() {
       _currentLocation = position;
@@ -268,8 +317,8 @@ class _StreetViewScreenState extends State<StreetViewScreen> {
                     ),
                   ),
                   child: GoogleMap(
-                    initialCameraPosition: const CameraPosition(
-                      target: _besiktasLatLng,
+                    initialCameraPosition: CameraPosition(
+                      target: _currentLocation,
                       zoom: 14.5,
                     ),
                     onMapCreated: (controller) => _mapController = controller,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'services/firebase_service.dart';
 
 class FeedbackScreen extends StatefulWidget {
   const FeedbackScreen({super.key});
@@ -31,11 +32,53 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   }
 
   // Handle feedback submission
-  void _submitFeedback() {
+  void _submitFeedback() async {
     // Hide keyboard if open
     FocusScope.of(context).unfocus();
 
+    final category = _selectedTag;
+    final content = _feedbackController.text.trim();
+
+    if (content.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter some feedback content before submitting.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // Show loading spinner
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF1E7E6C),
+        ),
+      ),
+    );
+
+    try {
+      await FirebaseService.instance.submitFeedback(category, content);
+      if (mounted) Navigator.pop(context); // Dismiss loading spinner
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Dismiss loading spinner
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to submit feedback: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+      return;
+    }
+
     // Show premium bottom sheet acknowledging submission
+    if (!mounted) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,

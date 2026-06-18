@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'services/firebase_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -390,17 +391,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           child: SizedBox(
                             height: 48,
                             child: ElevatedButton(
-                              onPressed: () {
+                              onPressed: () async {
                                 Navigator.pop(context);
-                                ScaffoldMessenger.of(context).clearSnackBars();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Thank you for your $selectedStars-star rating! Opening Play Store...'),
-                                    backgroundColor: _primaryColor,
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                );
+                                try {
+                                  await FirebaseService.instance.saveRating(selectedStars);
+                                } catch (e) {
+                                  debugPrint("Failed to save rating: $e");
+                                }
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).clearSnackBars();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Thank you for your $selectedStars-star rating! Opening Play Store...'),
+                                      backgroundColor: _primaryColor,
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                  );
+                                }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _primaryColor,

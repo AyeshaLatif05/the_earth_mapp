@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/travel_provider.dart';
+import 'services/firebase_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -22,7 +23,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       duration: const Duration(seconds: 45),
       vsync: this,
     )..repeat();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final savedLoc = await FirebaseService.instance.getHomeLocation();
+        if (savedLoc != null && mounted) {
+          ref.read(homeLocationProvider.notifier).state = savedLoc;
+        }
+      } catch (e) {
+        debugPrint("Failed to load home location: $e");
+      }
+
+      if (!mounted) return;
       final args =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null && args['showUpdateDialog'] == true) {
@@ -47,104 +58,168 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     showDialog(
       context: context,
       builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Update Place Name',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF111111),
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Enter location name',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF9CA3AF),
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: TextField(
-                    controller: controller,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    ),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF111111),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF6B7280),
+                    const Text(
+                      'Update Place Name',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF111111),
+                        letterSpacing: -0.2,
                       ),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Enter location name or select a suggestion',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF9CA3AF),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: TextField(
+                        controller: controller,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          contentPadding:
+                              EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        ),
+                        style: const TextStyle(
                           fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF111111),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (controller.text.trim().isNotEmpty) {
-                          ref.read(homeLocationProvider.notifier).state =
-                              controller.text.trim();
-                        }
-                        Navigator.pop(context);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1A7A68),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Suggestions',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF6B7280),
+                        letterSpacing: 0.3,
                       ),
-                      child: const Text(
-                        'Save',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        'New York',
+                        'London',
+                        'Paris',
+                        'Tokyo',
+                        'Istanbul',
+                      ].map((city) {
+                        final bool isSelectedCity = controller.text.trim().toLowerCase() == city.toLowerCase();
+                        return GestureDetector(
+                          onTap: () {
+                            setDialogState(() {
+                              controller.text = city;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isSelectedCity
+                                    ? const Color(0xFF1A7A68)
+                                    : Colors.transparent,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Text(
+                              city,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: isSelectedCity
+                                    ? const Color(0xFF1A7A68)
+                                    : const Color(0xFF374151),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            foregroundColor: const Color(0xFF6B7280),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final text = controller.text.trim();
+                            if (text.isNotEmpty) {
+                              ref.read(homeLocationProvider.notifier).state = text;
+                              try {
+                                await FirebaseService.instance.saveHomeLocation(text);
+                              } catch (e) {
+                                debugPrint("Failed to save home location: $e");
+                              }
+                            }
+                            if (context.mounted) Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1A7A68),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 12),
+                          ),
+                          child: const Text(
+                            'Save',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -282,7 +357,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                         bgColor: const Color(0xFFE6F4FF),
                                         iconAsset: 'assets/image 21.png',
                                         onTap: () => Navigator.pushNamed(
-                                            context, '/map_tools'),
+                                            context, '/street_view'),
                                       ),
                                     ),
                                     const SizedBox(width: 12),
@@ -295,7 +370,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                         iconAsset: 'assets/loc.png',
                                         iconColor: const Color(0xFFE53935),
                                         onTap: () => Navigator.pushNamed(
-                                            context, '/map_tools'),
+                                            context, '/street_view',
+                                            arguments: {'locationName': 'My Location'}),
                                       ),
                                     ),
                                   ],
@@ -335,8 +411,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                             'See real-time traffic updates on your route',
                                         bgColor: const Color(0xFFFEFBE8),
                                         iconAsset: 'assets/dir.png',
-                                        onTap: () => Navigator.pushNamed(
-                                            context, '/map_tools'),
+                                        onTap: () {
+                                          ref.read(activeTabProvider.notifier).state = 2; // Location tab
+                                          ref.read(trafficLayerProvider.notifier).state = true; // Traffic layer active
+                                          Navigator.pushNamed(context, '/asia');
+                                        },
                                       ),
                                     ),
                                   ],
@@ -366,7 +445,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                         iconAsset: 'assets/speed.png',
                                         iconColor: const Color(0xFFE65100),
                                         onTap: () => Navigator.pushNamed(
-                                            context, '/information_tools'),
+                                            context, '/live_sensor'),
                                       ),
                                     ),
                                     const SizedBox(width: 12),
@@ -442,82 +521,98 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget _buildHomeLocationCard() {
     final homeLoc = ref.watch(homeLocationProvider);
     final bool isEmpty = homeLoc == 'Add Home Location';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.07),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Red location pin
-          Image.asset(
-            'assets/loc.png',
-            width: 28,
-            height: 28,
-            color: const Color(0xFFE53935),
-            errorBuilder: (_, __, ___) => const Icon(
-              Icons.location_on,
-              color: Color(0xFFE53935),
-              size: 28,
+    return GestureDetector(
+      onTap: () {
+        if (isEmpty) {
+          _showUpdatePlaceNameDialog();
+        } else {
+          Navigator.pushNamed(
+            context,
+            '/street_view',
+            arguments: {'locationName': homeLoc},
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.07),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Home',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF9CA3AF),
-                    fontWeight: FontWeight.w400,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  homeLoc,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: isEmpty
-                        ? const Color(0xFF6B7280)
-                        : const Color(0xFF111111),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+          ],
+        ),
+        child: Row(
+          children: [
+            // Red location pin
+            Image.asset(
+              'assets/loc.png',
+              width: 28,
+              height: 28,
+              color: const Color(0xFFE53935),
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.location_on,
+                color: Color(0xFFE53935),
+                size: 28,
+              ),
             ),
-          ),
-          GestureDetector(
-            onTap: _showUpdatePlaceNameDialog,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: Image.asset(
-                'assets/edit-2.png',
-                width: 20,
-                height: 20,
-                color: const Color(0xFF6B7280),
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.edit_outlined,
-                  color: Color(0xFF6B7280),
-                  size: 20,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Home',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF9CA3AF),
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    homeLoc,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: isEmpty
+                          ? const Color(0xFF6B7280)
+                          : const Color(0xFF111111),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                // Open dialog explicitly when tapping the edit icon
+                _showUpdatePlaceNameDialog();
+              },
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Image.asset(
+                  'assets/edit-2.png',
+                  width: 20,
+                  height: 20,
+                  color: const Color(0xFF6B7280),
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.edit_outlined,
+                    color: Color(0xFF6B7280),
+                    size: 20,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
