@@ -27,6 +27,8 @@ import 'live_sensor_screen.dart';
 import 'speedometer_screen.dart';
 import 'compass_screen.dart';
 import 'live_weather_screen.dart';
+import 'gps_camera_screen.dart';
+import 'find_distance_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -98,6 +100,8 @@ class MyApp extends StatelessWidget {
         '/speedometer': (context) => const SpeedometerScreen(),
         '/compass': (context) => const CompassScreen(),
         '/live_weather': (context) => const LiveWeatherScreen(),
+        '/gps_camera': (context) => const GPSCameraScreen(),
+        '/find_distance': (context) => const FindDistanceScreen(),
       },
     );
   }

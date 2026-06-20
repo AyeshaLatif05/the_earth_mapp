@@ -1,6 +1,8 @@
 // lib/screens/calculation_tools_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/travel_provider.dart';
 
 class CalculationToolsScreen extends StatelessWidget {
   const CalculationToolsScreen({super.key});
@@ -109,13 +111,13 @@ class CalculationToolsScreen extends StatelessWidget {
 }
 
 // ── Tool Card ──────────────────────────────────────────────────────────────────
-class _ToolCard extends StatelessWidget {
+class _ToolCard extends ConsumerWidget {
   const _ToolCard({required this.tool});
 
   final _ToolItem tool;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: () {
         if (tool.title == 'Check Altitude') {
@@ -125,6 +127,14 @@ class _ToolCard extends StatelessWidget {
         } else if (tool.title == 'Near by Places') {
           Navigator.pushNamed(context, '/nearby_places');
         } else if (tool.title == 'Famous Places') {
+          Navigator.pushNamed(context, '/asia');
+        } else if (tool.title == 'GPS Camera') {
+          Navigator.pushNamed(context, '/gps_camera');
+        } else if (tool.title == 'Find Distance') {
+          Navigator.pushNamed(context, '/find_distance');
+        } else if (tool.title == 'Find Traffic') {
+          ref.read(activeTabProvider.notifier).state = 2; // Location tab
+          ref.read(trafficLayerProvider.notifier).state = true; // Traffic layer active
           Navigator.pushNamed(context, '/asia');
         } else {
           ScaffoldMessenger.of(context).clearSnackBars();
