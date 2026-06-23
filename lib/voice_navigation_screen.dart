@@ -1,7 +1,10 @@
 // lib/screens/voice_navigation_screen.dart
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'services/location_service.dart';
 
 class VoiceNavigationScreen extends StatefulWidget {
   const VoiceNavigationScreen({super.key});
@@ -24,6 +27,66 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
   bool _trafficEnabled = false;
 
   bool _voiceGuidanceActive = false;
+  String _currentAddress = 'Loading location...';
+  LatLng _currentLatLng = const LatLng(41.0438, 29.0067);
+  bool _isLoading = false;
+
+  Future<String?> _fetchAddress(LatLng position) async {
+    final lat = position.latitude;
+    final lng = position.longitude;
+    try {
+      final reverseGeocodeUri = Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json');
+      final headers = {'User-Agent': 'LiveEarthMap/1.0 (contact@example.com)'};
+      final response = await http.get(reverseGeocodeUri, headers: headers).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['display_name'] as String?;
+      }
+    } catch (e) {
+      debugPrint('Error reverse geocoding: $e');
+    }
+    return null;
+  }
+
+  void _loadInitialLocation() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final coords = await LocationService.getCurrentLocation();
+      final address = await _fetchAddress(coords);
+      if (mounted) {
+        setState(() {
+          _currentLatLng = coords;
+          if (address != null) {
+            _currentAddress = address;
+          } else {
+            _currentAddress = 'Lat: ${coords.latitude.toStringAsFixed(4)}, Lng: ${coords.longitude.toStringAsFixed(4)}';
+          }
+          _isLoading = false;
+        });
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLng(coords),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error loading initial location: $e');
+      if (mounted) {
+        setState(() {
+          _currentAddress = 'Location: Lat 41.0438, Lng 29.0067';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInitialLocation();
+    });
+  }
 
   // Location share trigger
   void _shareLocation() {
@@ -202,10 +265,34 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
                   _buildCircleControl(
                     icon: Icons.my_location,
                     iconColor: const Color(0xFF1E7E6C),
-                    onTap: () {
-                      _mapController?.animateCamera(
-                        CameraUpdate.newCameraPosition(_initialPosition),
-                      );
+                    onTap: () async {
+                      if (_isLoading) return;
+                      setState(() {
+                        _isLoading = true;
+                      });
+                      try {
+                        final coords = await LocationService.getCurrentLocation();
+                        final address = await _fetchAddress(coords);
+                        if (mounted) {
+                          setState(() {
+                            _currentLatLng = coords;
+                            if (address != null) {
+                              _currentAddress = address;
+                            } else {
+                              _currentAddress = 'Lat: ${coords.latitude.toStringAsFixed(4)}, Lng: ${coords.longitude.toStringAsFixed(4)}';
+                            }
+                            _isLoading = false;
+                          });
+                          _mapController?.animateCamera(
+                            CameraUpdate.newLatLng(coords),
+                          );
+                        }
+                      } catch (e) {
+                        debugPrint('Error getting current location: $e');
+                        setState(() {
+                          _isLoading = false;
+                        });
+                      }
                     },
                   ),
                 ],
@@ -317,11 +404,11 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
                           ),
                         ),
                         const SizedBox(width: 14),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              const Text(
                                 'Location',
                                 style: TextStyle(
                                   fontSize: 13,
@@ -329,15 +416,27 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
-                              SizedBox(height: 4),
-                              Text(
-                                'Location here, Rawalpindi, Pakistan',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF111111),
-                                ),
-                              ),
+                              const SizedBox(height: 4),
+                              _isLoading
+                                  ? const Text(
+                                      'Fetching location...',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF888888),
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    )
+                                  : Text(
+                                      _currentAddress,
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF111111),
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                             ],
                           ),
                         ),

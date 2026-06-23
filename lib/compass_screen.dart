@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'services/location_service.dart';
 
 class CompassScreen extends StatefulWidget {
   const CompassScreen({super.key});
@@ -12,6 +15,62 @@ class _CompassScreenState extends State<CompassScreen> {
   // Direct simulated rotation in radians
   double _headingRadians = 0.0;
   bool _showCalibrateDialog = false;
+
+  double _latitude = 33.5973;
+  double _longitude = 73.0679;
+  double _accuracy = 3.2;
+  StreamSubscription<Position>? _positionStreamSubscription;
+
+  void _startLocationAndHeadingTracking() async {
+    try {
+      final initialCoords = await LocationService.getCurrentLocation();
+      if (mounted) {
+        setState(() {
+          _latitude = initialCoords.latitude;
+          _longitude = initialCoords.longitude;
+        });
+      }
+    } catch (e) {
+      debugPrint('Could not load initial location for compass: $e');
+    }
+
+    const LocationSettings locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 1,
+    );
+    try {
+      _positionStreamSubscription = Geolocator.getPositionStream(
+        locationSettings: locationSettings,
+      ).listen((Position position) {
+        if (mounted) {
+          setState(() {
+            _latitude = position.latitude;
+            _longitude = position.longitude;
+            _accuracy = position.accuracy;
+            if (position.heading > 0) {
+              _headingRadians = position.heading * math.pi / 180.0;
+            }
+          });
+        }
+      }, onError: (err) {
+        debugPrint('Compass Geolocator stream error: $err');
+      });
+    } catch (e) {
+      debugPrint('Could not start Geolocator stream in compass: $e');
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _startLocationAndHeadingTracking();
+  }
+
+  @override
+  void dispose() {
+    _positionStreamSubscription?.cancel();
+    super.dispose();
+  }
 
   int get _headingDegrees {
     int deg = (_headingRadians * 180 / math.pi).round() % 360;
@@ -207,13 +266,13 @@ class _CompassScreenState extends State<CompassScreen> {
                       color: const Color(0xFFF3F4F6),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               'LATITUDE',
                               style: TextStyle(
                                 fontSize: 10,
@@ -222,10 +281,10 @@ class _CompassScreenState extends State<CompassScreen> {
                                 letterSpacing: 0.5,
                               ),
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
-                              '33.5973° N',
-                              style: TextStyle(
+                              '${_latitude.abs().toStringAsFixed(4)}° ${_latitude >= 0 ? 'N' : 'S'}',
+                              style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF111111),
@@ -236,7 +295,7 @@ class _CompassScreenState extends State<CompassScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               'LONGITUDE',
                               style: TextStyle(
                                 fontSize: 10,
@@ -245,10 +304,10 @@ class _CompassScreenState extends State<CompassScreen> {
                                 letterSpacing: 0.5,
                               ),
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
-                              '73.0679° E',
-                              style: TextStyle(
+                              '${_longitude.abs().toStringAsFixed(4)}° ${_longitude >= 0 ? 'E' : 'W'}',
+                              style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF111111),
@@ -259,7 +318,7 @@ class _CompassScreenState extends State<CompassScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               'ACCURACY',
                               style: TextStyle(
                                 fontSize: 10,
@@ -268,10 +327,10 @@ class _CompassScreenState extends State<CompassScreen> {
                                 letterSpacing: 0.5,
                               ),
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
-                              '±3.2 meters',
-                              style: TextStyle(
+                              '±${_accuracy.toStringAsFixed(1)} m',
+                              style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF1E7E6C),

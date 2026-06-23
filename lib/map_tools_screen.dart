@@ -1,12 +1,16 @@
 // lib/screens/map_tools_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/language_provider.dart';
 
-class MapToolsScreen extends StatelessWidget {
+class MapToolsScreen extends ConsumerWidget {
   const MapToolsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tr = ref.watch(translationProvider);
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -17,9 +21,9 @@ class MapToolsScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Map Tools',
-          style: TextStyle(
+        title: Text(
+          tr['map_tools'] ?? 'Map Tools',
+          style: const TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -38,8 +42,8 @@ class MapToolsScreen extends StatelessWidget {
           physics: const BouncingScrollPhysics(),
           children: [
             _MapToolCard(
-              title: '3D Earth Map',
-              subtitle: 'Explore the planet using live satellite data',
+              title: tr['3d_earth_map'] ?? '3D Earth Map',
+              subtitle: tr['explore_planet_satellite'] ?? 'Explore the planet using live satellite data',
               bgColor: const Color(0xFFE6F4FF), // Pastel blue
               iconAsset: 'assets/terrain.png',
               onTap: () {
@@ -47,8 +51,8 @@ class MapToolsScreen extends StatelessWidget {
               },
             ),
             _MapToolCard(
-              title: 'My Location',
-              subtitle: 'Find your current position on the map',
+              title: tr['my_location'] ?? 'My Location',
+              subtitle: tr['find_current_position'] ?? 'Find your current position on the map',
               bgColor: const Color(0xFFFFF1F0), // Pastel coral/red
               iconAsset: 'assets/loc.png',
               iconColor: const Color(0xFFE53935), // Red pin to match
@@ -57,8 +61,8 @@ class MapToolsScreen extends StatelessWidget {
               },
             ),
             _MapToolCard(
-              title: 'Street View',
-              subtitle: 'Explore the planet using live satellite data',
+              title: tr['street_view'] ?? 'Street View',
+              subtitle: tr['explore_planet_satellite'] ?? 'Explore the planet using live satellite data',
               bgColor: const Color(0xFFF5F6FA), // Pastel grey
               iconAsset: 'assets/view.png',
               onTap: () {
@@ -66,8 +70,8 @@ class MapToolsScreen extends StatelessWidget {
               },
             ),
             _MapToolCard(
-              title: '3D Globe',
-              subtitle: 'Explore Earth in an interactive 3D view',
+              title: tr['globe_3d'] ?? '3D Globe',
+              subtitle: tr['explore_earth_3d'] ?? 'Explore Earth in an interactive 3D view',
               bgColor: const Color(0xFFEBF8EA), // Pastel green
               iconAsset: 'assets/icon earth map.png', // Large globe asset resized
               onTap: () {
@@ -75,8 +79,8 @@ class MapToolsScreen extends StatelessWidget {
               },
             ),
             _MapToolCard(
-              title: 'Meet in Middle',
-              subtitle: 'Discover a midpoint between locations',
+              title: tr['meet_in_middle'] ?? 'Meet in Middle',
+              subtitle: tr['discover_midpoint'] ?? 'Discover a midpoint between locations',
               bgColor: const Color(0xFFFFF0E6), // Pastel orange/peach
               iconAsset: 'assets/Frame.png', // Custom icon fallback
               onTap: () {
@@ -84,8 +88,8 @@ class MapToolsScreen extends StatelessWidget {
               },
             ),
             _MapToolCard(
-              title: 'Voice Navigation',
-              subtitle: 'Let voice guide you on your route',
+              title: tr['voice_navigation'] ?? 'Voice Navigation',
+              subtitle: tr['voice_guide_route'] ?? 'Let voice guide you on your route',
               bgColor: const Color(0xFFFEFBE8), // Pastel yellow/cream
               iconAsset: 'assets/Rotate.png',
               onTap: () {
@@ -93,8 +97,8 @@ class MapToolsScreen extends StatelessWidget {
               },
             ),
             _MapToolCard(
-              title: 'Your Parking',
-              subtitle: 'Stores your parking spot for quick access',
+              title: tr['your_parking'] ?? 'Your Parking',
+              subtitle: tr['store_parking_spot'] ?? 'Stores your parking spot for quick access',
               bgColor: const Color(0xFFFFF1F0), // Pastel red/coral
               iconAsset: 'assets/parking 1.png', // Custom parking icon
               onTap: () {

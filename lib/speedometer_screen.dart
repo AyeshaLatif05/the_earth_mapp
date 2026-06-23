@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 class SpeedometerScreen extends StatefulWidget {
   const SpeedometerScreen({super.key});
@@ -14,6 +16,40 @@ class _SpeedometerScreenState extends State<SpeedometerScreen> with SingleTicker
   double _totalSpeedAccumulated = 0.0;
   int _speedCount = 0;
   bool _isKmh = true;
+  StreamSubscription<Position>? _positionStreamSubscription;
+
+  void _startSpeedTracking() {
+    const LocationSettings locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.bestForNavigation,
+      distanceFilter: 1,
+    );
+    try {
+      _positionStreamSubscription = Geolocator.getPositionStream(
+        locationSettings: locationSettings,
+      ).listen((Position position) {
+        final speedInKmh = position.speed * 3.6;
+        if (speedInKmh > 0) {
+          _updateSpeed(speedInKmh);
+        }
+      }, onError: (err) {
+        debugPrint('Speedometer Geolocator stream error: $err');
+      });
+    } catch (e) {
+      debugPrint('Could not start Geolocator speed stream: $e');
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _startSpeedTracking();
+  }
+
+  @override
+  void dispose() {
+    _positionStreamSubscription?.cancel();
+    super.dispose();
+  }
 
   // Warning thresholds
   static const double _warningKmh = 110.0;

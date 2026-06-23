@@ -89,4 +89,23 @@ class FirebaseService {
     }
     return null;
   }
+
+  // ────────── APP LANGUAGE ──────────
+
+  /// Save app language code to Firestore
+  Future<void> saveLanguage(String langCode) async {
+    await _db.collection('settings').doc('app_language').set({
+      'code': langCode,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Fetch the saved app language code from Firestore
+  Future<String?> getLanguage() async {
+    final doc = await _db.collection('settings').doc('app_language').get();
+    if (doc.exists && doc.data() != null) {
+      return doc.data()!['code'] as String?;
+    }
+    return null;
+  }
 }

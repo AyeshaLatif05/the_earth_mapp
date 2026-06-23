@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'services/firebase_service.dart';
+import 'providers/language_provider.dart';
 
-class FeedbackScreen extends StatefulWidget {
+class FeedbackScreen extends ConsumerStatefulWidget {
   const FeedbackScreen({super.key});
 
   @override
-  State<FeedbackScreen> createState() => _FeedbackScreenState();
+  ConsumerState<FeedbackScreen> createState() => _FeedbackScreenState();
 }
 
-class _FeedbackScreenState extends State<FeedbackScreen> {
+class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
   final Color _primaryColor = const Color(0xFF1E7E6C);
   final TextEditingController _feedbackController = TextEditingController();
 
-  // Selected issue tag - matches the mockup's selected default
+  // Selected issue tag - matches the mockup's selected default (English key)
   String _selectedTag = 'Map not working';
 
-  // Available feedback category tags
+  // Available feedback category tags (English keys)
   final List<String> _tags = [
     'Map not working',
     'Live Location not working',
@@ -33,6 +35,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   // Handle feedback submission
   void _submitFeedback() async {
+    final tr = ref.read(translationProvider);
     // Hide keyboard if open
     FocusScope.of(context).unfocus();
 
@@ -41,8 +44,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
     if (content.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter some feedback content before submitting.'),
+        SnackBar(
+          content: Text(tr['enter_feedback_content'] ?? 'Please enter some feedback content before submitting.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -68,7 +71,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         Navigator.pop(context); // Dismiss loading spinner
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to submit feedback: $e'),
+            content: Text('${tr['failed_submit_feedback'] ?? 'Failed to submit feedback: '}$e'),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.redAccent,
           ),
@@ -107,19 +110,19 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  'Feedback Submitted!',
-                  style: TextStyle(
+                Text(
+                  tr['feedback_submitted'] ?? 'Feedback Submitted!',
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF111111),
                   ),
                 ),
                 const SizedBox(height: 10),
-                const Text(
-                  'Thank you for helping us improve Explore Earth! Our engineering team will review your report immediately.',
+                Text(
+                  tr['feedback_submitted_desc'] ?? 'Thank you for helping us improve Explore Earth! Our engineering team will review your report immediately.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14.5,
                     color: Color(0xFF6B7280),
                     height: 1.45,
@@ -143,9 +146,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Done',
-                      style: TextStyle(
+                    child: Text(
+                      tr['done'] ?? 'Done',
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -162,6 +165,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tr = ref.watch(translationProvider);
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -172,9 +177,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Feedback',
-          style: TextStyle(
+        title: Text(
+          tr['feedback'] ?? 'Feedback',
+          style: const TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -201,9 +206,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Subtitle Instruction Text
-                        const Text(
-                          'Tell us about the problem you encountered and we will try our best to solve it',
-                          style: TextStyle(
+                        Text(
+                          tr['tell_us_problem'] ?? 'Tell us about the problem you encountered and we will try our best to solve it',
+                          style: const TextStyle(
                             fontSize: 16,
                             height: 1.45,
                             color: Color(0xFF1F2937),
@@ -218,6 +223,14 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                           runSpacing: 12,
                           children: _tags.map((tag) {
                             final isSelected = tag == _selectedTag;
+                            String displayTag = tag;
+                            if (tag == 'Map not working') displayTag = tr['map_not_working'] ?? tag;
+                            if (tag == 'Live Location not working') displayTag = tr['live_location_not_working'] ?? tag;
+                            if (tag == 'Features & Tools') displayTag = tr['features_tools'] ?? tag;
+                            if (tag == 'Sensors not working') displayTag = tr['sensors_not_working'] ?? tag;
+                            if (tag == 'App crash') displayTag = tr['app_crash'] ?? tag;
+                            if (tag == 'Can not watch street view') displayTag = tr['cannot_watch_street_view'] ?? tag;
+
                             return GestureDetector(
                               onTap: () {
                                 setState(() {
@@ -238,7 +251,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                                       : null,
                                 ),
                                 child: Text(
-                                  tag,
+                                  displayTag,
                                   style: TextStyle(
                                     fontSize: 14.5,
                                     color: const Color(0xFF111111),
@@ -265,9 +278,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                               fontSize: 15.5,
                               color: Color(0xFF111111),
                             ),
-                            decoration: const InputDecoration(
-                              hintText: 'Tell us your feedback here',
-                              hintStyle: TextStyle(
+                            decoration: InputDecoration(
+                              hintText: tr['tell_feedback_here'] ?? 'Tell us your feedback here',
+                              hintStyle: const TextStyle(
                                 color: Color(0xFF8E8E93),
                                 fontSize: 15,
                               ),
@@ -295,9 +308,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: const Text(
-                            'Submit',
-                            style: TextStyle(
+                          child: Text(
+                            tr['submit'] ?? 'Submit',
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.1,

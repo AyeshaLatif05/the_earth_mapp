@@ -1,7 +1,10 @@
 // lib/screens/altitude_screen.dart
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'services/location_service.dart';
 
 class AltitudeScreen extends StatefulWidget {
   const AltitudeScreen({super.key});
@@ -15,6 +18,7 @@ class _AltitudeScreenState extends State<AltitudeScreen> {
   bool _trafficEnabled = false;
   MapType _currentMapType = MapType.normal;
   double _currentAltitude = 512.00;
+  bool _isLoading = false;
 
   // Default camera position: Beşiktaş, Istanbul matching mockup
   static const CameraPosition _initialPosition = CameraPosition(
@@ -38,8 +42,71 @@ class _AltitudeScreenState extends State<AltitudeScreen> {
     );
   }
 
-  void _onMapTapped(LatLng position) {
+  Future<Map<String, dynamic>?> _fetchAltitudeAndAddress(LatLng position) async {
+    final lat = position.latitude;
+    final lng = position.longitude;
+    try {
+      final elevationUri = Uri.parse('https://api.open-meteo.com/v1/elevation?latitude=$lat&longitude=$lng');
+      final reverseGeocodeUri = Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json');
+      final headers = {'User-Agent': 'LiveEarthMap/1.0 (contact@example.com)'};
+
+      final results = await Future.wait([
+        http.get(elevationUri).timeout(const Duration(seconds: 5)),
+        http.get(reverseGeocodeUri, headers: headers).timeout(const Duration(seconds: 5)),
+      ]);
+
+      double? elevation;
+      String? address;
+
+      final elevRes = results[0];
+      if (elevRes.statusCode == 200) {
+        final data = json.decode(elevRes.body);
+        if (data['elevation'] != null && data['elevation'] is List && data['elevation'].isNotEmpty) {
+          elevation = (data['elevation'][0] as num).toDouble();
+        }
+      }
+
+      final geoRes = results[1];
+      if (geoRes.statusCode == 200) {
+        final data = json.decode(geoRes.body);
+        address = data['display_name'] as String?;
+      }
+
+      return {
+        'elevation': elevation,
+        'address': address,
+      };
+    } catch (e) {
+      debugPrint('Error fetching altitude or address: $e');
+      return null;
+    }
+  }
+
+  Future<LatLng?> _searchGeocode(String query) async {
+    try {
+      final searchUri = Uri.parse('https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=json&limit=1');
+      final headers = {'User-Agent': 'LiveEarthMap/1.0 (contact@example.com)'};
+      final response = await http.get(searchUri, headers: headers).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        if (data.isNotEmpty) {
+          final lat = double.tryParse(data[0]['lat']?.toString() ?? '');
+          final lon = double.tryParse(data[0]['lon']?.toString() ?? '');
+          if (lat != null && lon != null) {
+            return LatLng(lat, lon);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error searching geocode: $e');
+    }
+    return null;
+  }
+
+  void _onMapTapped(LatLng position) async {
+    if (_isLoading) return;
     setState(() {
+      _isLoading = true;
       _markers.clear();
       _markers.add(
         Marker(
@@ -48,10 +115,28 @@ class _AltitudeScreenState extends State<AltitudeScreen> {
           infoWindow: const InfoWindow(title: 'Selected Location'),
         ),
       );
-      // Simulate real-time altitude based on coordinate hash for realistic variety
-      _currentAltitude = 120.0 + (position.latitude.hashCode + position.longitude.hashCode) % 680;
-      _currentAddress = 'Location: Lat ${position.latitude.toStringAsFixed(4)}, Lng ${position.longitude.toStringAsFixed(4)}';
     });
+
+    final data = await _fetchAltitudeAndAddress(position);
+
+    if (mounted) {
+      setState(() {
+        if (data != null) {
+          if (data['elevation'] != null) {
+            _currentAltitude = data['elevation'];
+          }
+          if (data['address'] != null) {
+            _currentAddress = data['address'];
+          } else {
+            _currentAddress = 'Lat: ${position.latitude.toStringAsFixed(4)}, Lng: ${position.longitude.toStringAsFixed(4)}';
+          }
+        } else {
+          _currentAltitude = 120.0 + (position.latitude.hashCode + position.longitude.hashCode) % 680;
+          _currentAddress = 'Lat: ${position.latitude.toStringAsFixed(4)}, Lng: ${position.longitude.toStringAsFixed(4)}';
+        }
+        _isLoading = false;
+      });
+    }
   }
 
   void _toggleTraffic() {
@@ -68,32 +153,81 @@ class _AltitudeScreenState extends State<AltitudeScreen> {
     });
   }
 
-  void _searchLocation() {
+  void _searchLocation() async {
+    if (_isLoading) return;
     final query = _searchController.text.trim();
     if (query.isEmpty) return;
 
-    // Simulate geocoding to a random offset near Beşiktaş
-    final newPos = LatLng(
-      41.0438 + (query.hashCode % 100) * 0.0001,
-      29.0067 + (query.hashCode % 50) * 0.0001,
-    );
-
     setState(() {
-      _markers.clear();
-      _markers.add(
-        Marker(
-          markerId: const MarkerId('current_location'),
-          position: newPos,
-          infoWindow: InfoWindow(title: query),
-        ),
-      );
-      _currentAltitude = 150.0 + (query.hashCode % 450);
-      _currentAddress = query;
+      _isLoading = true;
     });
 
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLng(newPos),
-    );
+    final newPos = await _searchGeocode(query);
+
+    if (newPos != null) {
+      final data = await _fetchAltitudeAndAddress(newPos);
+      if (mounted) {
+        setState(() {
+          _markers.clear();
+          _markers.add(
+            Marker(
+              markerId: const MarkerId('current_location'),
+              position: newPos,
+              infoWindow: InfoWindow(title: query),
+            ),
+          );
+          if (data != null) {
+            if (data['elevation'] != null) {
+              _currentAltitude = data['elevation'];
+            }
+            if (data['address'] != null) {
+              _currentAddress = data['address'];
+            } else {
+              _currentAddress = query;
+            }
+          } else {
+            _currentAltitude = 150.0 + (query.hashCode % 450);
+            _currentAddress = query;
+          }
+        });
+
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLng(newPos),
+        );
+      }
+    } else {
+      final fallbackPos = LatLng(
+        41.0438 + (query.hashCode % 100) * 0.0001,
+        29.0067 + (query.hashCode % 50) * 0.0001,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not locate address. Showing simulated location.')),
+        );
+        setState(() {
+          _markers.clear();
+          _markers.add(
+            Marker(
+              markerId: const MarkerId('current_location'),
+              position: fallbackPos,
+              infoWindow: InfoWindow(title: query),
+            ),
+          );
+          _currentAltitude = 150.0 + (query.hashCode % 450);
+          _currentAddress = query;
+        });
+
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLng(fallbackPos),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -180,6 +314,15 @@ class _AltitudeScreenState extends State<AltitudeScreen> {
                         ),
                       ),
                     ),
+                    if (_isLoading)
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E8278)),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -264,12 +407,29 @@ class _AltitudeScreenState extends State<AltitudeScreen> {
                     },
                   ),
                   const SizedBox(height: 10),
-                  _mapControlBtn(
+                   _mapControlBtn(
                     const Icon(Icons.my_location, size: 20, color: Color(0xFF111111)),
-                    onTap: () {
-                      _mapController?.animateCamera(
-                        CameraUpdate.newCameraPosition(_initialPosition),
-                      );
+                    onTap: () async {
+                      if (_isLoading) return;
+                      setState(() {
+                        _isLoading = true;
+                      });
+                      try {
+                        final coords = await LocationService.getCurrentLocation();
+                        // Re-enable loading for _onMapTapped since we reset it here to allow calling
+                        setState(() {
+                          _isLoading = false;
+                        });
+                        _onMapTapped(coords);
+                        _mapController?.animateCamera(
+                          CameraUpdate.newLatLng(coords),
+                        );
+                      } catch (e) {
+                        debugPrint('Error getting location: $e');
+                        setState(() {
+                          _isLoading = false;
+                        });
+                      }
                     },
                   ),
                 ],
@@ -315,15 +475,25 @@ class _AltitudeScreenState extends State<AltitudeScreen> {
                           size: 26,
                         ),
                         const SizedBox(width: 10),
-                        Text(
-                          '${_currentAltitude.toStringAsFixed(2)} m',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF111111),
-                            letterSpacing: -0.5,
+                        if (_isLoading)
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E8278)),
+                            ),
+                          )
+                        else
+                          Text(
+                            '${_currentAltitude.toStringAsFixed(2)} m',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF111111),
+                              letterSpacing: -0.5,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -336,15 +506,25 @@ class _AltitudeScreenState extends State<AltitudeScreen> {
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
-                            _currentAddress,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF555555),
-                              height: 1.4,
-                            ),
-                          ),
+                          child: _isLoading
+                              ? const Text(
+                                  'Fetching location...',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF888888),
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                )
+                              : Text(
+                                  _currentAddress,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF555555),
+                                    height: 1.4,
+                                  ),
+                                ),
                         ),
                       ],
                     ),

@@ -1,12 +1,16 @@
 // lib/screens/information_tools_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/language_provider.dart';
 
-class InformationToolsScreen extends StatelessWidget {
+class InformationToolsScreen extends ConsumerWidget {
   const InformationToolsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tr = ref.watch(translationProvider);
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -17,9 +21,9 @@ class InformationToolsScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Information Tools',
-          style: TextStyle(
+        title: Text(
+          tr['information_tools'] ?? 'Information Tools',
+          style: const TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -38,8 +42,8 @@ class InformationToolsScreen extends StatelessWidget {
           physics: const BouncingScrollPhysics(),
           children: [
             _InfoToolCard(
-              title: 'Live Sensor',
-              subtitle: 'Real-time data from your device sensors',
+              title: tr['live_sensor'] ?? 'Live Sensor',
+              subtitle: tr['real_time_sensor_data'] ?? 'Real-time data from your device sensors',
               bgColor: const Color(0xFFFFF0E6), // Pastel orange
               iconAsset: 'assets/speed.png',
               onTap: () {
@@ -47,8 +51,8 @@ class InformationToolsScreen extends StatelessWidget {
               },
             ),
             _InfoToolCard(
-              title: 'Oxygen Level',
-              subtitle: 'Monitor oxygen level and air quality',
+              title: tr['oxygen_level'] ?? 'Oxygen Level',
+              subtitle: tr['monitor_oxygen_quality'] ?? 'Monitor oxygen level and air quality',
               bgColor: const Color(0xFFE8EDF8), // Pastel blue/grey
               iconAsset: 'assets/windy.png',
               onTap: () {
@@ -56,8 +60,8 @@ class InformationToolsScreen extends StatelessWidget {
               },
             ),
             _InfoToolCard(
-              title: 'Speedometer',
-              subtitle: 'Track your current speed in real time',
+              title: tr['speedometer'] ?? 'Speedometer',
+              subtitle: tr['track_current_speed'] ?? 'Track your current speed in real time',
               bgColor: const Color(0xFFEBF8EA), // Pastel green
               iconAsset: 'assets/speed.png',
               onTap: () {
@@ -65,8 +69,8 @@ class InformationToolsScreen extends StatelessWidget {
               },
             ),
             _InfoToolCard(
-              title: 'Compass',
-              subtitle: 'Find your direction anywhere on Earth',
+              title: tr['compass'] ?? 'Compass',
+              subtitle: tr['find_direction_earth'] ?? 'Find your direction anywhere on Earth',
               bgColor: const Color(0xFFE3F2FD), // Pastel cyan
               iconAsset: 'assets/Rotate.png',
               onTap: () {
@@ -74,8 +78,8 @@ class InformationToolsScreen extends StatelessWidget {
               },
             ),
             _InfoToolCard(
-              title: 'Live Weather',
-              subtitle: 'Check current weather updates anywhere',
+              title: tr['live_weather'] ?? 'Live Weather',
+              subtitle: tr['check_weather_updates'] ?? 'Check current weather updates anywhere',
               bgColor: const Color(0xFFE8F4FD), // Pastel light blue
               iconAsset: 'assets/weath.png',
               onTap: () {
@@ -83,8 +87,8 @@ class InformationToolsScreen extends StatelessWidget {
               },
             ),
             _InfoToolCard(
-              title: 'Countries Info',
-              subtitle: 'Explore key info about countries worldwide',
+              title: tr['countries_info'] ?? 'Countries Info',
+              subtitle: tr['explore_countries_worldwide'] ?? 'Explore key info about countries worldwide',
               bgColor: const Color(0xFFFFF1F0), // Pastel pink/coral
               iconAsset: 'assets/lang.png',
               onTap: () {
@@ -92,8 +96,8 @@ class InformationToolsScreen extends StatelessWidget {
               },
             ),
             _InfoToolCard(
-              title: 'Level Meter',
-              subtitle: 'Check surface level and tilt accurately',
+              title: tr['level_meter'] ?? 'Level Meter',
+              subtitle: tr['check_surface_level'] ?? 'Check surface level and tilt accurately',
               bgColor: const Color(0xFFFEFBE8), // Pastel yellow/cream
               iconAsset: 'assets/level.png',
               onTap: () {

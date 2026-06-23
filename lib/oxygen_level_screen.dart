@@ -1,6 +1,11 @@
 // lib/screens/oxygen_level_screen.dart
 
+import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'services/location_service.dart';
 
 class OxygenLevelScreen extends StatefulWidget {
   const OxygenLevelScreen({super.key});
@@ -12,6 +17,97 @@ class OxygenLevelScreen extends StatefulWidget {
 class _OxygenLevelScreenState extends State<OxygenLevelScreen> {
   // Oxygen percentage level (0 to 100)
   double _oxygenLevel = 20.0;
+  String _currentAddress = 'Loading location...';
+  bool _isLoading = false;
+
+  Future<Map<String, dynamic>?> _fetchElevationAndAddress(LatLng position) async {
+    final lat = position.latitude;
+    final lng = position.longitude;
+    try {
+      final elevationUri = Uri.parse('https://api.open-meteo.com/v1/elevation?latitude=$lat&longitude=$lng');
+      final reverseGeocodeUri = Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json');
+      final headers = {'User-Agent': 'LiveEarthMap/1.0 (contact@example.com)'};
+
+      final results = await Future.wait([
+        http.get(elevationUri).timeout(const Duration(seconds: 5)),
+        http.get(reverseGeocodeUri, headers: headers).timeout(const Duration(seconds: 5)),
+      ]);
+
+      double? elevation;
+      String? address;
+
+      final elevRes = results[0];
+      if (elevRes.statusCode == 200) {
+        final data = json.decode(elevRes.body);
+        if (data['elevation'] != null && data['elevation'] is List && data['elevation'].isNotEmpty) {
+          elevation = (data['elevation'][0] as num).toDouble();
+        }
+      }
+
+      final geoRes = results[1];
+      if (geoRes.statusCode == 200) {
+        final data = json.decode(geoRes.body);
+        address = data['display_name'] as String?;
+      }
+
+      return {
+        'elevation': elevation,
+        'address': address,
+      };
+    } catch (e) {
+      debugPrint('Error fetching elevation or address in oxygen level screen: $e');
+      return null;
+    }
+  }
+
+  void _loadOxygenData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final coords = await LocationService.getCurrentLocation();
+      final data = await _fetchElevationAndAddress(coords);
+
+      if (mounted) {
+        setState(() {
+          if (data != null) {
+            if (data['address'] != null) {
+              _currentAddress = data['address'];
+            } else {
+              _currentAddress = 'Lat: ${coords.latitude.toStringAsFixed(4)}, Lng: ${coords.longitude.toStringAsFixed(4)}';
+            }
+
+            final elevation = data['elevation'] ?? 0.0;
+            // Calculate O2 percentage using barometric formula:
+            // 20.9% O2 at sea level, decreases with altitude.
+            // O2% = 20.9 * exp(-elevation / 8000.0)
+            final o2 = 20.9 * math.exp(-elevation / 8000.0);
+            _oxygenLevel = o2.clamp(0.0, 100.0);
+          } else {
+            _currentAddress = 'Lat: ${coords.latitude.toStringAsFixed(4)}, Lng: ${coords.longitude.toStringAsFixed(4)}';
+            _oxygenLevel = 20.9;
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading oxygen data: $e');
+      if (mounted) {
+        setState(() {
+          _currentAddress = 'Location Lookup Failed';
+          _oxygenLevel = 20.9;
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOxygenData();
+  }
 
   // Height of the vertical slider bar
   static const double _sliderHeight = 280.0;
@@ -72,6 +168,17 @@ class _OxygenLevelScreenState extends State<OxygenLevelScreen> {
           ),
         ),
         centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Colors.black, size: 26),
+            onPressed: () {
+              if (!_isLoading) {
+                _loadOxygenData();
+              }
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: Padding(
@@ -277,11 +384,11 @@ class _OxygenLevelScreenState extends State<OxygenLevelScreen> {
             ),
           ),
           const SizedBox(width: 14),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Location',
                   style: TextStyle(
                     fontSize: 13,
@@ -289,15 +396,27 @@ class _OxygenLevelScreenState extends State<OxygenLevelScreen> {
                     fontWeight: FontWeight.w400,
                   ),
                 ),
-                SizedBox(height: 4),
-                Text(
-                  'Location here, Rawalpindi, Pakistan',
-                  style: TextStyle(
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF111111),
-                  ),
-                ),
+                const SizedBox(height: 4),
+                _isLoading
+                    ? const Text(
+                        'Fetching location...',
+                        style: TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF888888),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      )
+                    : Text(
+                        _currentAddress,
+                        style: const TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF111111),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
               ],
             ),
           ),

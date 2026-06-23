@@ -1,8 +1,11 @@
 // lib/screens/parking_screen.dart
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'services/firebase_service.dart';
+import 'services/location_service.dart';
 
 class ParkingScreen extends StatefulWidget {
   const ParkingScreen({super.key});
@@ -16,6 +19,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
   bool _trafficEnabled = false;
   MapType _currentMapType = MapType.normal;
   LatLng? _parkedLocation;
+  bool _isLoading = false;
 
   // Default camera position: Beşiktaş, Istanbul matching mockup
   static const CameraPosition _initialPosition = CameraPosition(
@@ -39,8 +43,48 @@ class _ParkingScreenState extends State<ParkingScreen> {
     );
   }
 
-  void _onMapTapped(LatLng position) {
+  Future<String?> _fetchAddress(LatLng position) async {
+    final lat = position.latitude;
+    final lng = position.longitude;
+    try {
+      final reverseGeocodeUri = Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json');
+      final headers = {'User-Agent': 'LiveEarthMap/1.0 (contact@example.com)'};
+      final response = await http.get(reverseGeocodeUri, headers: headers).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['display_name'] as String?;
+      }
+    } catch (e) {
+      debugPrint('Error reverse geocoding: $e');
+    }
+    return null;
+  }
+
+  Future<LatLng?> _searchGeocode(String query) async {
+    try {
+      final searchUri = Uri.parse('https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=json&limit=1');
+      final headers = {'User-Agent': 'LiveEarthMap/1.0 (contact@example.com)'};
+      final response = await http.get(searchUri, headers: headers).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        if (data.isNotEmpty) {
+          final lat = double.tryParse(data[0]['lat']?.toString() ?? '');
+          final lon = double.tryParse(data[0]['lon']?.toString() ?? '');
+          if (lat != null && lon != null) {
+            return LatLng(lat, lon);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error searching geocode: $e');
+    }
+    return null;
+  }
+
+  void _onMapTapped(LatLng position) async {
+    if (_isLoading) return;
     setState(() {
+      _isLoading = true;
       _markers.clear();
       _markers.add(
         Marker(
@@ -59,8 +103,20 @@ class _ParkingScreenState extends State<ParkingScreen> {
           ),
         );
       }
-      _currentAddress = 'Location: Lat ${position.latitude.toStringAsFixed(4)}, Lng ${position.longitude.toStringAsFixed(4)}';
     });
+
+    final address = await _fetchAddress(position);
+
+    if (mounted) {
+      setState(() {
+        if (address != null) {
+          _currentAddress = address;
+        } else {
+          _currentAddress = 'Lat: ${position.latitude.toStringAsFixed(4)}, Lng: ${position.longitude.toStringAsFixed(4)}';
+        }
+        _isLoading = false;
+      });
+    }
   }
 
   void _saveParkingSpot() async {
@@ -160,31 +216,92 @@ class _ParkingScreenState extends State<ParkingScreen> {
     });
   }
 
-  void _searchLocation() {
+  void _searchLocation() async {
+    if (_isLoading) return;
     final query = _searchController.text.trim();
     if (query.isEmpty) return;
 
-    // Simulate geocoding to a random offset near Beşiktaş
-    final newPos = LatLng(
-      41.0438 + (query.hashCode % 100) * 0.0001,
-      29.0067 + (query.hashCode % 50) * 0.0001,
-    );
-
     setState(() {
-      _markers.clear();
-      _markers.add(
-        Marker(
-          markerId: const MarkerId('current_location'),
-          position: newPos,
-          infoWindow: InfoWindow(title: query),
-        ),
-      );
-      _currentAddress = query;
+      _isLoading = true;
     });
 
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLng(newPos),
-    );
+    final newPos = await _searchGeocode(query);
+
+    if (newPos != null) {
+      final address = await _fetchAddress(newPos);
+      if (mounted) {
+        setState(() {
+          _markers.clear();
+          _markers.add(
+            Marker(
+              markerId: const MarkerId('current_location'),
+              position: newPos,
+              infoWindow: InfoWindow(title: query),
+            ),
+          );
+          if (_parkedLocation != null) {
+            _markers.add(
+              Marker(
+                markerId: const MarkerId('parked_location'),
+                position: _parkedLocation!,
+                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+                infoWindow: const Icon(Icons.directions_car) as InfoWindow, // fallback representation matching code
+              ),
+            );
+          }
+          if (address != null) {
+            _currentAddress = address;
+          } else {
+            _currentAddress = query;
+          }
+        });
+
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLng(newPos),
+        );
+      }
+    } else {
+      final fallbackPos = LatLng(
+        41.0438 + (query.hashCode % 100) * 0.0001,
+        29.0067 + (query.hashCode % 50) * 0.0001,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not locate address. Showing simulated location.')),
+        );
+        setState(() {
+          _markers.clear();
+          _markers.add(
+            Marker(
+              markerId: const MarkerId('current_location'),
+              position: fallbackPos,
+              infoWindow: InfoWindow(title: query),
+            ),
+          );
+          if (_parkedLocation != null) {
+            _markers.add(
+              Marker(
+                markerId: const MarkerId('parked_location'),
+                position: _parkedLocation!,
+                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+                infoWindow: const InfoWindow(title: 'Your Parked Car'),
+              ),
+            );
+          }
+          _currentAddress = query;
+        });
+
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLng(fallbackPos),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -305,6 +422,15 @@ class _ParkingScreenState extends State<ParkingScreen> {
                         ),
                       ),
                     ),
+                    if (_isLoading)
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E8278)),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -391,10 +517,26 @@ class _ParkingScreenState extends State<ParkingScreen> {
                   const SizedBox(height: 10),
                   _mapControlBtn(
                     const Icon(Icons.my_location, size: 20, color: Color(0xFF111111)),
-                    onTap: () {
-                      _mapController?.animateCamera(
-                        CameraUpdate.newCameraPosition(_initialPosition),
-                      );
+                    onTap: () async {
+                      if (_isLoading) return;
+                      setState(() {
+                        _isLoading = true;
+                      });
+                      try {
+                        final coords = await LocationService.getCurrentLocation();
+                        setState(() {
+                          _isLoading = false;
+                        });
+                        _onMapTapped(coords);
+                        _mapController?.animateCamera(
+                          CameraUpdate.newLatLng(coords),
+                        );
+                      } catch (e) {
+                        debugPrint('Error getting location: $e');
+                        setState(() {
+                          _isLoading = false;
+                        });
+                      }
                     },
                   ),
                 ],
@@ -441,15 +583,25 @@ class _ParkingScreenState extends State<ParkingScreen> {
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(
-                            _currentAddress,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF111111),
-                              height: 1.4,
-                            ),
-                          ),
+                          child: _isLoading
+                              ? const Text(
+                                  'Fetching location...',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF888888),
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                )
+                              : Text(
+                                  _currentAddress,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF111111),
+                                    height: 1.4,
+                                  ),
+                                ),
                         ),
                         const SizedBox(width: 10),
                         IconButton(

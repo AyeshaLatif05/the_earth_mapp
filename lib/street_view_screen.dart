@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'services/location_service.dart';
 
 class StreetViewScreen extends StatefulWidget {
   const StreetViewScreen({super.key});
@@ -42,6 +43,35 @@ class _StreetViewScreenState extends State<StreetViewScreen> {
     );
   }
 
+  void _loadMyLocation() async {
+    try {
+      final coords = await LocationService.getCurrentLocation();
+      if (mounted) {
+        setState(() {
+          _currentLocation = coords;
+          _markers.clear();
+          _markers.add(
+            Marker(
+              markerId: const MarkerId('street_view_pos'),
+              position: _currentLocation,
+              infoWindow: InfoWindow(
+                title: _placeName,
+                snippet: 'Lat: ${_currentLocation.latitude.toStringAsFixed(4)}, Lng: ${_currentLocation.longitude.toStringAsFixed(4)}',
+              ),
+            ),
+          );
+          _selectedPanoramaIndex = _placeName.hashCode.abs() % _panoramas.length;
+        });
+
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLng(_currentLocation),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error loading current location in street view: $e');
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -54,7 +84,13 @@ class _StreetViewScreenState extends State<StreetViewScreen> {
         
         // Lookup coordinate of target cities
         final lowerName = name.toLowerCase();
-        if (lowerName.contains('new york')) {
+        if (args.containsKey('latitude') && args['latitude'] != null &&
+            args.containsKey('longitude') && args['longitude'] != null) {
+          locationCoords = LatLng(
+            (args['latitude'] as num).toDouble(),
+            (args['longitude'] as num).toDouble(),
+          );
+        } else if (lowerName.contains('new york')) {
           locationCoords = const LatLng(40.7128, -74.0060);
         } else if (lowerName.contains('london')) {
           locationCoords = const LatLng(51.5074, -0.1278);
@@ -66,6 +102,7 @@ class _StreetViewScreenState extends State<StreetViewScreen> {
           locationCoords = const LatLng(41.0082, 28.9784);
         } else if (lowerName.contains('my location')) {
           locationCoords = const LatLng(37.4275, -122.1697); // Palo Alto Googleplex
+          _loadMyLocation();
         } else {
           // Fallback hash-based coordinate simulation
           final double lat = 41.0438 + (name.hashCode % 1000) / 10000.0 - 0.05;

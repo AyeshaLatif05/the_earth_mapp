@@ -2,8 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/language_provider.dart';
 import 'providers/travel_provider.dart';
 import 'services/firebase_service.dart';
+import 'services/location_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -49,10 +51,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   void _showUpdatePlaceNameDialog() {
+    final tr = ref.read(translationProvider);
+    final homeLoc = ref.read(homeLocationProvider);
     final TextEditingController controller = TextEditingController(
-      text: ref.read(homeLocationProvider) == 'Add Home Location'
+      text: homeLoc == 'Add Home Location'
           ? ''
-          : ref.read(homeLocationProvider),
+          : homeLoc,
     );
 
     showDialog(
@@ -71,9 +75,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Update Place Name',
-                      style: TextStyle(
+                    Text(
+                      tr['update_place_name'] ?? 'Update Place Name',
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFF111111),
@@ -81,9 +85,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Enter location name or select a suggestion',
-                      style: TextStyle(
+                    Text(
+                      tr['enter_location_suggestion'] ?? 'Enter location name or select a suggestion',
+                      style: const TextStyle(
                         fontSize: 13,
                         color: Color(0xFF9CA3AF),
                         fontWeight: FontWeight.w400,
@@ -110,9 +114,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Suggestions',
-                      style: TextStyle(
+                    Text(
+                      tr['suggestions'] ?? 'Suggestions',
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF6B7280),
@@ -173,9 +177,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           style: TextButton.styleFrom(
                             foregroundColor: const Color(0xFF6B7280),
                           ),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
+                          child: Text(
+                            tr['cancel'] ?? 'Cancel',
+                            style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                             ),
@@ -205,9 +209,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 20, vertical: 12),
                           ),
-                          child: const Text(
-                            'Save',
-                            style: TextStyle(
+                          child: Text(
+                            tr['save'] ?? 'Save',
+                            style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                             ),
@@ -225,8 +229,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
+  void _onMyLocationTapped(BuildContext context) async {
+    final tr = ref.read(translationProvider);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF1A7A68),
+        ),
+      ),
+    );
+
+    try {
+      final coords = await LocationService.getCurrentLocation();
+      if (context.mounted) {
+        Navigator.pop(context); // Dismiss loading dialog
+        Navigator.pushNamed(
+          context,
+          '/street_view',
+          arguments: {
+            'locationName': tr['my_location'] ?? 'My Location',
+            'latitude': coords.latitude,
+            'longitude': coords.longitude,
+          },
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Dismiss loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${tr['could_not_get_location'] ?? 'Could not get current location: '}$e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final tr = ref.watch(translationProvider);
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A0E2A),
       body: Stack(
@@ -295,7 +337,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             child: Column(
               children: [
                 // App bar
-                _buildAppBar(context),
+                _buildAppBar(context, tr),
                 const SizedBox(height: 8),
 
                 // Scrollable body
@@ -311,14 +353,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         // ── Home Location Card ──
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: _buildHomeLocationCard(),
+                          child: _buildHomeLocationCard(tr),
                         ),
                         const SizedBox(height: 10),
 
                         // ── Live Earth Banner ──
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: _buildLiveEarthBanner(context),
+                          child: _buildLiveEarthBanner(context, tr),
                         ),
                         const SizedBox(height: 16),
 
@@ -339,7 +381,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               // Map Tools
                               _buildSectionHeader(
                                 context,
-                                'Map Tools',
+                                tr['map_tools'] ?? 'Map Tools',
                                 onTap: () => Navigator.pushNamed(
                                     context, '/map_tools'),
                               ),
@@ -351,8 +393,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   children: [
                                     Expanded(
                                       child: _ToolCard(
-                                        title: '3D Earth Map',
-                                        subtitle:
+                                        title: tr['3d_earth_map'] ?? '3D Earth Map',
+                                        subtitle: tr['explore_planet_satellite'] ??
                                             'Explore the planet using live satellite data',
                                         bgColor: const Color(0xFFE6F4FF),
                                         iconAsset: 'assets/image 21.png',
@@ -363,15 +405,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: _ToolCard(
-                                        title: 'My Location',
-                                        subtitle:
+                                        title: tr['my_location'] ?? 'My Location',
+                                        subtitle: tr['find_current_position'] ??
                                             'Find your current position on the map',
                                         bgColor: const Color(0xFFFFF1F0),
                                         iconAsset: 'assets/loc.png',
                                         iconColor: const Color(0xFFE53935),
-                                        onTap: () => Navigator.pushNamed(
-                                            context, '/street_view',
-                                            arguments: {'locationName': 'My Location'}),
+                                        onTap: () => _onMyLocationTapped(context),
                                       ),
                                     ),
                                   ],
@@ -382,7 +422,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               // Calculation Tools
                               _buildSectionHeader(
                                 context,
-                                'Calculation Tools',
+                                tr['calculation_tools'] ?? 'Calculation Tools',
                                 onTap: () => Navigator.pushNamed(
                                     context, '/calculation_tools'),
                               ),
@@ -394,8 +434,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   children: [
                                     Expanded(
                                       child: _ToolCard(
-                                        title: 'Check Altitude',
-                                        subtitle:
+                                        title: tr['check_altitude'] ?? 'Check Altitude',
+                                        subtitle: tr['explore_earth_3d'] ??
                                             'Explore Earth in an interactive 3D view',
                                         bgColor: const Color(0xFFF3EEFF),
                                         iconAsset: 'assets/image 10.png',
@@ -406,8 +446,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: _ToolCard(
-                                        title: 'Find Traffic',
-                                        subtitle:
+                                        title: tr['find_traffic'] ?? 'Find Traffic',
+                                        subtitle: tr['see_traffic_updates'] ??
                                             'See real-time traffic updates on your route',
                                         bgColor: const Color(0xFFFEFBE8),
                                         iconAsset: 'assets/dir.png',
@@ -426,7 +466,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               // Information Tools
                               _buildSectionHeader(
                                 context,
-                                'Information Tools',
+                                tr['information_tools'] ?? 'Information Tools',
                                 onTap: () => Navigator.pushNamed(
                                     context, '/information_tools'),
                               ),
@@ -438,8 +478,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   children: [
                                     Expanded(
                                       child: _ToolCard(
-                                        title: 'Live Sensor',
-                                        subtitle:
+                                        title: tr['live_sensor'] ?? 'Live Sensor',
+                                        subtitle: tr['real_time_sensor_data'] ??
                                             'Real-time data from your device sensors',
                                         bgColor: const Color(0xFFFFF0E6),
                                         iconAsset: 'assets/speed.png',
@@ -451,8 +491,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: _ToolCard(
-                                        title: 'Oxygen Level',
-                                        subtitle:
+                                        title: tr['oxygen_level'] ?? 'Oxygen Level',
+                                        subtitle: tr['monitor_oxygen_quality'] ??
                                             'Monitor oxygen level and air quality',
                                         bgColor: const Color(0xFFF0F5FF),
                                         iconAsset: 'assets/image 14.png',
@@ -483,7 +523,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   // ── App Bar ──
-  Widget _buildAppBar(BuildContext context) {
+  Widget _buildAppBar(BuildContext context, Map<String, String> tr) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
@@ -503,9 +543,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
           ),
           const SizedBox(width: 14),
-          const Text(
-            'Explore Earth',
-            style: TextStyle(
+          Text(
+            tr['explore_earth'] ?? 'Explore Earth',
+            style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: Colors.white,
@@ -518,7 +558,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   // ── Home Location Card ──
-  Widget _buildHomeLocationCard() {
+  Widget _buildHomeLocationCard(Map<String, String> tr) {
     final homeLoc = ref.watch(homeLocationProvider);
     final bool isEmpty = homeLoc == 'Add Home Location';
     return GestureDetector(
@@ -566,9 +606,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Home',
-                    style: TextStyle(
+                  Text(
+                    tr['home'] ?? 'Home',
+                    style: const TextStyle(
                       fontSize: 11,
                       color: Color(0xFF9CA3AF),
                       fontWeight: FontWeight.w400,
@@ -577,7 +617,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    homeLoc,
+                    isEmpty ? (tr['add_home_location'] ?? 'Add Home Location') : homeLoc,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -618,7 +658,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   // ── Live Earth Banner ──
-  Widget _buildLiveEarthBanner(BuildContext context) {
+  Widget _buildLiveEarthBanner(BuildContext context, Map<String, String> tr) {
     return GestureDetector(
       onTap: () => Navigator.pushNamed(context, '/cameras'),
       child: Container(
@@ -644,24 +684,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ),
         child: Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Live Earth Map',
-                    style: TextStyle(
+                    tr['live_earth_map'] ?? 'Live Earth Map',
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                       letterSpacing: -0.3,
                     ),
                   ),
-                  SizedBox(height: 6),
+                  const SizedBox(height: 6),
                   Text(
-                    'Explore Live Cameras and ...',
-                    style: TextStyle(
+                    tr['explore_live_cameras'] ?? 'Explore Live Cameras and ...',
+                    style: const TextStyle(
                       fontSize: 19,
                       color: Colors.white,
                       fontWeight: FontWeight.w400,
