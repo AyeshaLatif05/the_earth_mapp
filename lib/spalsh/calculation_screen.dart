@@ -12,13 +12,13 @@ class CalculationToolsScreen extends StatelessWidget {
       title: 'Check Altitude',
       subtitle: 'Explore Earth in an interactive 3D view',
       bgColor: Color(0xFFEDEAF5),
-      iconAsset: 'assets/level.png',
+      iconAsset: 'assets/image 10.png',
     ),
     _ToolItem(
       title: 'Find Traffic',
       subtitle: 'See real-time traffic updates on your route',
       bgColor: Color(0xFFFFF8E1),
-      iconAsset: 'assets/dir.png',
+      iconAsset: 'assets/image 11.png',
     ),
     _ToolItem(
       title: 'GPS Camera',

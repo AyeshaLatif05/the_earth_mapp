@@ -383,7 +383,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 context,
                                 tr['map_tools'] ?? 'Map Tools',
                                 onTap: () => Navigator.pushNamed(
-                                    context, '/map_tools'),
+                            context, '/map_tools'),
                               ),
                               const SizedBox(height: 12),
                               Padding(
@@ -409,8 +409,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                         subtitle: tr['find_current_position'] ??
                                             'Find your current position on the map',
                                         bgColor: const Color(0xFFFFF1F0),
-                                        iconAsset: 'assets/loc.png',
-                                        iconColor: const Color(0xFFE53935),
+                                        iconAsset: 'assets/image 3.png',
                                         onTap: () => _onMyLocationTapped(context),
                                       ),
                                     ),
@@ -450,7 +449,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                         subtitle: tr['see_traffic_updates'] ??
                                             'See real-time traffic updates on your route',
                                         bgColor: const Color(0xFFFEFBE8),
-                                        iconAsset: 'assets/dir.png',
+                                        iconAsset: 'assets/image 11.png',
                                         onTap: () {
                                           ref.read(activeTabProvider.notifier).state = 2; // Location tab
                                           ref.read(trafficLayerProvider.notifier).state = true; // Traffic layer active
@@ -482,8 +481,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                         subtitle: tr['real_time_sensor_data'] ??
                                             'Real-time data from your device sensors',
                                         bgColor: const Color(0xFFFFF0E6),
-                                        iconAsset: 'assets/speed.png',
-                                        iconColor: const Color(0xFFE65100),
+                                        iconAsset: 'assets/image 18.png',
                                         onTap: () => Navigator.pushNamed(
                                             context, '/live_sensor'),
                                       ),
@@ -496,7 +494,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                             'Monitor oxygen level and air quality',
                                         bgColor: const Color(0xFFF0F5FF),
                                         iconAsset: 'assets/image 14.png',
-                                        iconColor: const Color(0xFF1E88E5),
                                         onTap: () => Navigator.pushNamed(
                                             context, '/oxygen_level'),
                                       ),
@@ -665,14 +662,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF1E7E6C),
-              Color(0xFF136153),
-            ],
-          ),
+          color: const Color(0xFF1A7A68),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -702,7 +692,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   Text(
                     tr['explore_live_cameras'] ?? 'Explore Live Cameras and ...',
                     style: const TextStyle(
-                      fontSize: 19,
+                      fontSize: 13,
                       color: Colors.white,
                       fontWeight: FontWeight.w400,
                     ),
@@ -712,8 +702,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             Image.asset(
               'assets/image 1.png',
-              scale:4,
-              
+              width: 72,
+              height: 72,
+              fit: BoxFit.contain,
               errorBuilder: (_, __, ___) => const Icon(
                 Icons.videocam_outlined,
                 color: Colors.white70,
@@ -772,7 +763,6 @@ class _ToolCard extends StatelessWidget {
   final String subtitle;
   final Color bgColor;
   final String iconAsset;
-  final Color? iconColor;
   final VoidCallback onTap;
 
   const _ToolCard({
@@ -780,7 +770,6 @@ class _ToolCard extends StatelessWidget {
     required this.subtitle,
     required this.bgColor,
     required this.iconAsset,
-    this.iconColor,
     required this.onTap,
   });
 
@@ -803,12 +792,12 @@ class _ToolCard extends StatelessWidget {
               right: 0,
               child: Image.asset(
                 iconAsset,
-                width: 48,
-                height: 48,
-                color: iconColor,
+                width: 56,
+                height: 56,
+                fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => Container(
-                  width: 48,
-                  height: 48,
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.4),
                     borderRadius: BorderRadius.circular(12),

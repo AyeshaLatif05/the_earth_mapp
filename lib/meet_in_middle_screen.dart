@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'services/location_service.dart';
 
 class MeetInMiddleScreen extends StatefulWidget {
   const MeetInMiddleScreen({super.key});
@@ -15,6 +16,9 @@ class _MeetInMiddleScreenState extends State<MeetInMiddleScreen> {
   GoogleMapController? _mapController;
   bool _isRouteSelected = false;
   Set<Polyline> _polylines = {};
+  bool _is3DView = false;
+  MapType _mapType = MapType.normal;
+  bool _trafficEnabled = false;
 
 // ── Add this method inside _MeetInMiddleScreenState ──
 
@@ -130,7 +134,8 @@ void _showSelectRouteSheet() {
                 zoomControlsEnabled: false,
                 myLocationButtonEnabled: false,
                 mapToolbarEnabled: false,
-                trafficEnabled: false,
+                trafficEnabled: _trafficEnabled,
+                mapType: _mapType,
               ),
             ),
 
@@ -204,7 +209,23 @@ void _showSelectRouteSheet() {
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Color(0xFF111111)),
             onPressed: () {
-              // TODO: Clear/delete this session
+              setState(() {
+                _isRouteSelected = false;
+                _clearRoute();
+                _setMarkers();
+                _personALocation = 'Location here, Rawalpindi, Pakistan';
+                _personBLocation = 'Location here, Rawalpindi, Pakistan';
+              });
+              _mapController?.animateCamera(
+                CameraUpdate.newCameraPosition(_initialPosition),
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Session reset successfully'),
+                  duration: Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
             },
           ),
         ],
@@ -215,17 +236,56 @@ void _showSelectRouteSheet() {
   Widget _buildLeftControls() {
     return Column(
       children: [
-        _mapControlBtn(Icons.view_in_ar_outlined, onTap: () {
-          // Toggle 3D view
-        }),
+        _mapControlBtn(
+          Icons.view_in_ar_outlined,
+          isActive: _is3DView,
+          onTap: () {
+            setState(() {
+              _is3DView = !_is3DView;
+              if (_is3DView) {
+                _mapController?.animateCamera(
+                  CameraUpdate.newCameraPosition(
+                    const CameraPosition(
+                      target: LatLng(41.0438, 29.0067),
+                      zoom: 15.0,
+                      tilt: 45.0,
+                    ),
+                  ),
+                );
+              } else {
+                _mapController?.animateCamera(
+                  CameraUpdate.newCameraPosition(
+                    const CameraPosition(
+                      target: LatLng(41.0438, 29.0067),
+                      zoom: 13.5,
+                      tilt: 0.0,
+                    ),
+                  ),
+                );
+              }
+            });
+          },
+        ),
         const SizedBox(height: 8),
-        _mapControlBtn(Icons.language, onTap: () {
-          // Toggle map type
-        }),
+        _mapControlBtn(
+          Icons.language,
+          isActive: _mapType == MapType.hybrid,
+          onTap: () {
+            setState(() {
+              _mapType = _mapType == MapType.normal ? MapType.hybrid : MapType.normal;
+            });
+          },
+        ),
         const SizedBox(height: 8),
-        _mapControlBtn(Icons.traffic_outlined, onTap: () {
-          // Toggle traffic
-        }),
+        _mapControlBtn(
+          Icons.traffic_outlined,
+          isActive: _trafficEnabled,
+          onTap: () {
+            setState(() {
+              _trafficEnabled = !_trafficEnabled;
+            });
+          },
+        ),
       ],
     );
   }
@@ -244,8 +304,50 @@ void _showSelectRouteSheet() {
         _mapControlBtn(
           Icons.my_location,
           iconColor: const Color(0xFF1A7A68),
-          onTap: () {
-            // Center on user location
+          onTap: () async {
+            final navigator = Navigator.of(context);
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => const Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF1A7A68),
+                ),
+              ),
+            );
+
+            try {
+              final coords = await LocationService.getCurrentLocation();
+              if (!mounted) return;
+              navigator.pop(); // Dismiss loading dialog
+              _mapController?.animateCamera(
+                CameraUpdate.newLatLng(coords),
+              );
+              setState(() {
+                _personALocation = 'My Location (Lat: ${coords.latitude.toStringAsFixed(4)}, Lng: ${coords.longitude.toStringAsFixed(4)})';
+                _markers = {
+                  Marker(
+                    markerId: const MarkerId('personA'),
+                    position: coords,
+                    icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+                    infoWindow: const InfoWindow(title: 'Person A (You)'),
+                  ),
+                  Marker(
+                    markerId: const MarkerId('personB'),
+                    position: const LatLng(41.0300, 28.9900),
+                    icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+                    infoWindow: const InfoWindow(title: 'Person B'),
+                  ),
+                };
+              });
+            } catch (e) {
+              if (!mounted) return;
+              navigator.pop(); // Dismiss loading dialog
+              scaffoldMessenger.showSnackBar(
+                SnackBar(content: Text('Could not get current location: $e')),
+              );
+            }
           },
         ),
       ],
@@ -255,6 +357,7 @@ void _showSelectRouteSheet() {
   Widget _mapControlBtn(
     IconData icon, {
     VoidCallback? onTap,
+    bool isActive = false,
     Color iconColor = const Color(0xFF111111),
   }) {
     return GestureDetector(
@@ -263,7 +366,7 @@ void _showSelectRouteSheet() {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isActive ? const Color(0xFF1A7A68) : Colors.white,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
@@ -273,7 +376,11 @@ void _showSelectRouteSheet() {
             ),
           ],
         ),
-        child: Icon(icon, size: 20, color: iconColor),
+        child: Icon(
+          icon,
+          size: 20,
+          color: isActive ? Colors.white : iconColor,
+        ),
       ),
     );
   }

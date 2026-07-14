@@ -22,75 +22,51 @@ class _NearbyPlacesScreenState extends State<NearbyPlacesScreen> {
   final List<Map<String, dynamic>> _categories = [
     {
       'name': 'Airport',
-      'icon': Icons.local_airport_rounded,
-      'color': const Color(0xFF0288D1), // Cyan/Blue
-      'bgColor': const Color(0xFFE1F5FE),
+      'image': 'assets/airport.png',
     },
     {
       'name': 'ATM',
-      'icon': Icons.local_atm_rounded,
-      'color': const Color(0xFF00ACC1), // Teal
-      'bgColor': const Color(0xFFE0F7FA),
+      'image': 'assets/atm.png',
     },
     {
       'name': 'Bank',
-      'icon': Icons.account_balance_rounded,
-      'color': const Color(0xFF3F51B5), // Indigo
-      'bgColor': const Color(0xFFE8EAF6),
+      'image': 'assets/bank.png',
     },
     {
       'name': 'Bar',
-      'icon': Icons.local_bar_rounded,
-      'color': const Color(0xFFFFB300), // Amber
-      'bgColor': const Color(0xFFFFF8E1),
+      'image': 'assets/bar.png',
     },
     {
       'name': 'Beauty Salon',
-      'icon': Icons.face_retouching_natural_rounded,
-      'color': const Color(0xFFEC407A), // Pink
-      'bgColor': const Color(0xFFFCE4EC),
+      'image': 'assets/beauty_salon.png',
     },
     {
       'name': 'Book Store',
-      'icon': Icons.menu_book_rounded,
-      'color': const Color(0xFF43A047), // Green
-      'bgColor': const Color(0xFFE8F5E9),
+      'image': 'assets/book_store.png',
     },
     {
       'name': 'Bakery',
-      'icon': Icons.bakery_dining_rounded,
-      'color': const Color(0xFF8D6E63), // Brown
-      'bgColor': const Color(0xFFEFEBE9),
+      'image': 'assets/bakery.png',
     },
     {
       'name': 'Bowling',
-      'icon': Icons.sports_baseball_rounded,
-      'color': const Color(0xFFE53935), // Red
-      'bgColor': const Color(0xFFFFEBEE),
+      'image': 'assets/bowling.png',
     },
     {
       'name': 'Bus Station',
-      'icon': Icons.directions_bus_rounded,
-      'color': const Color(0xFFFB8C00), // Orange
-      'bgColor': const Color(0xFFFFF3E0),
+      'image': 'assets/bus_station.png',
     },
     {
       'name': 'Cafe',
-      'icon': Icons.coffee_rounded,
-      'color': const Color(0xFF5D4037), // Dark brown
-      'bgColor': const Color(0xFFEFEBE9),
+      'image': 'assets/cafe.png',
     },
     {
       'name': 'Car Rental',
-      'icon': Icons.car_rental_rounded,
-      'color': const Color(0xFF5E35B1), // Purple
-      'bgColor': const Color(0xFFEDE7F6),
+      'image': 'assets/car_rental.png',
     },
     {
       'name': 'Car Repair',
-      'icon': Icons.build_circle_rounded,
-      'color': const Color(0xFF455A64), // Blue Grey
-      'bgColor': const Color(0xFFECEFF1),
+      'image': 'assets/car_repair.png',
     },
   ];
 
@@ -253,12 +229,12 @@ class _NearbyPlacesScreenState extends State<NearbyPlacesScreen> {
                     )
                   : GridView.builder(
                       physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        crossAxisSpacing: 14,
-                        mainAxisSpacing: 14,
-                        childAspectRatio: 1.5,
+                        crossAxisSpacing: 20,
+                        mainAxisSpacing: 20,
+                        childAspectRatio: 1.68,
                       ),
                       itemCount: filtered.length,
                       itemBuilder: (context, index) {
@@ -283,49 +259,39 @@ class _NearbyPlacesScreenState extends State<NearbyPlacesScreen> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.015),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(12),
         ),
-        padding: const EdgeInsets.all(12),
-        child: Row(
+        child: Stack(
           children: [
-            // Category Name Align left bottom-ish
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  cat['name'] as String,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1F2937),
-                    height: 1.2,
-                  ),
+            Positioned(
+              left: 12,
+              bottom: 12,
+              right: 12,
+              child: Text(
+                cat['name'] as String,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF000000),
+                  height: 1.2,
                 ),
               ),
             ),
-            // Flat Illustrative Icon aligned right top-ish
-            Align(
-              alignment: Alignment.centerRight,
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: cat['bgColor'] as Color,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  cat['icon'] as IconData,
-                  color: cat['color'] as Color,
-                  size: 26,
-                ),
+            Positioned(
+              right: 8,
+              top: 8,
+              child: Image.asset(
+                cat['image'] as String,
+                height: 48,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(
+                    Icons.location_on_outlined,
+                    color: Colors.grey,
+                    size: 32,
+                  );
+                },
               ),
             ),
           ],

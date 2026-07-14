@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 class LiveWeatherScreen extends StatefulWidget {
   const LiveWeatherScreen({super.key});
@@ -10,181 +12,206 @@ class LiveWeatherScreen extends StatefulWidget {
 class _LiveWeatherScreenState extends State<LiveWeatherScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedCity = 'Rawalpindi';
+  bool _isLoading = false;
+  String? _errorMessage;
+  Map<String, dynamic>? _liveWeatherData;
 
-  // Complete mock weather database with detailed info
-  final Map<String, Map<String, dynamic>> _weatherDatabase = {
-    'rawalpindi': {
-      'city': 'Rawalpindi',
-      'country': 'Pakistan',
-      'temp': '32°C',
-      'condition': 'Sunny Day',
-      'wind': '12 km/h',
-      'humidity': '45%',
-      'hourly': [
-        {'time': 'Now', 'temp': '32°', 'icon': Icons.wb_sunny_rounded, 'highlight': true},
-        {'time': '12 PM', 'temp': '34°', 'icon': Icons.wb_sunny_rounded},
-        {'time': '2 PM', 'temp': '35°', 'icon': Icons.wb_sunny_rounded},
-        {'time': '4 PM', 'temp': '33°', 'icon': Icons.wb_sunny_rounded},
-        {'time': '6 PM', 'temp': '30°', 'icon': Icons.wb_sunny_outlined},
-      ],
-      'forecast': [
-        {'day': 'Monday', 'temp': '33°C', 'icon': Icons.wb_sunny_rounded},
-        {'day': 'Tuesday', 'temp': '35°C', 'icon': Icons.wb_sunny_rounded},
-        {'day': 'Wednesday', 'temp': '34°C', 'icon': Icons.wb_sunny_rounded},
-        {'day': 'Thursday', 'temp': '31°C', 'icon': Icons.cloud_queue_rounded},
-        {'day': 'Friday', 'temp': '30°C', 'icon': Icons.ac_unit_rounded},
-        {'day': 'Saturday', 'temp': '32°C', 'icon': Icons.cloud_queue_rounded},
-        {'day': 'Sunday', 'temp': '34°C', 'icon': Icons.wb_sunny_rounded},
-      ],
-    },
-    'new york': {
-      'city': 'New York',
-      'country': 'United States',
-      'temp': '22°C',
-      'condition': 'Partly Cloudy',
-      'wind': '18 km/h',
-      'humidity': '60%',
-      'hourly': [
-        {'time': 'Now', 'temp': '22°', 'icon': Icons.cloud_queue_rounded, 'highlight': true},
-        {'time': '12 PM', 'temp': '23°', 'icon': Icons.cloud_queue_rounded},
-        {'time': '2 PM', 'temp': '24°', 'icon': Icons.wb_cloudy_rounded},
-        {'time': '4 PM', 'temp': '22°', 'icon': Icons.wb_cloudy_rounded},
-        {'time': '6 PM', 'temp': '20°', 'icon': Icons.cloud_queue_rounded},
-      ],
-      'forecast': [
-        {'day': 'Monday', 'temp': '23°C', 'icon': Icons.cloud_queue_rounded},
-        {'day': 'Tuesday', 'temp': '24°C', 'icon': Icons.wb_sunny_rounded},
-        {'day': 'Wednesday', 'temp': '22°C', 'icon': Icons.wb_cloudy_rounded},
-        {'day': 'Thursday', 'temp': '19°C', 'icon': Icons.grain_rounded},
-        {'day': 'Friday', 'temp': '20°C', 'icon': Icons.cloud_queue_rounded},
-        {'day': 'Saturday', 'temp': '21°C', 'icon': Icons.wb_sunny_rounded},
-        {'day': 'Sunday', 'temp': '23°C', 'icon': Icons.wb_sunny_rounded},
-      ],
-    },
-    'london': {
-      'city': 'London',
-      'country': 'United Kingdom',
-      'temp': '16°C',
-      'condition': 'Showers / Rain',
-      'wind': '22 km/h',
-      'humidity': '82%',
-      'hourly': [
-        {'time': 'Now', 'temp': '16°', 'icon': Icons.grain_rounded, 'highlight': true},
-        {'time': '12 PM', 'temp': '17°', 'icon': Icons.grain_rounded},
-        {'time': '2 PM', 'temp': '18°', 'icon': Icons.cloud_queue_rounded},
-        {'time': '4 PM', 'temp': '16°', 'icon': Icons.grain_rounded},
-        {'time': '6 PM', 'temp': '15°', 'icon': Icons.wb_cloudy_rounded},
-      ],
-      'forecast': [
-        {'day': 'Monday', 'temp': '17°C', 'icon': Icons.grain_rounded},
-        {'day': 'Tuesday', 'temp': '18°C', 'icon': Icons.cloud_queue_rounded},
-        {'day': 'Wednesday', 'temp': '16°C', 'icon': Icons.grain_rounded},
-        {'day': 'Thursday', 'temp': '15°C', 'icon': Icons.wb_cloudy_rounded},
-        {'day': 'Friday', 'temp': '14°C', 'icon': Icons.grain_rounded},
-        {'day': 'Saturday', 'temp': '16°C', 'icon': Icons.cloud_queue_rounded},
-        {'day': 'Sunday', 'temp': '18°C', 'icon': Icons.wb_sunny_rounded},
-      ],
-    },
-    'paris': {
-      'city': 'Paris',
-      'country': 'France',
-      'temp': '19°C',
-      'condition': 'Cloudy Sky',
-      'wind': '15 km/h',
-      'humidity': '68%',
-      'hourly': [
-        {'time': 'Now', 'temp': '19°', 'icon': Icons.wb_cloudy_rounded, 'highlight': true},
-        {'time': '12 PM', 'temp': '20°', 'icon': Icons.wb_cloudy_rounded},
-        {'time': '2 PM', 'temp': '21°', 'icon': Icons.cloud_queue_rounded},
-        {'time': '4 PM', 'temp': '19°', 'icon': Icons.wb_cloudy_rounded},
-        {'time': '6 PM', 'temp': '18°', 'icon': Icons.cloud_queue_rounded},
-      ],
-      'forecast': [
-        {'day': 'Monday', 'temp': '20°C', 'icon': Icons.wb_cloudy_rounded},
-        {'day': 'Tuesday', 'temp': '21°C', 'icon': Icons.cloud_queue_rounded},
-        {'day': 'Wednesday', 'temp': '19°C', 'icon': Icons.wb_cloudy_rounded},
-        {'day': 'Thursday', 'temp': '18°C', 'icon': Icons.grain_rounded},
-        {'day': 'Friday', 'temp': '17°C', 'icon': Icons.cloud_queue_rounded},
-        {'day': 'Saturday', 'temp': '19°C', 'icon': Icons.wb_sunny_rounded},
-        {'day': 'Sunday', 'temp': '21°C', 'icon': Icons.wb_sunny_rounded},
-      ],
-    },
-    'tokyo': {
-      'city': 'Tokyo',
-      'country': 'Japan',
-      'temp': '25°C',
-      'condition': 'Pleasant',
-      'wind': '10 km/h',
-      'humidity': '50%',
-      'hourly': [
-        {'time': 'Now', 'temp': '25°', 'icon': Icons.wb_sunny_rounded, 'highlight': true},
-        {'time': '12 PM', 'temp': '26°', 'icon': Icons.wb_sunny_rounded},
-        {'time': '2 PM', 'temp': '27°', 'icon': Icons.wb_sunny_rounded},
-        {'time': '4 PM', 'temp': '24°', 'icon': Icons.cloud_queue_rounded},
-        {'time': '6 PM', 'temp': '22°', 'icon': Icons.cloud_queue_rounded},
-      ],
-      'forecast': [
-        {'day': 'Monday', 'temp': '26°C', 'icon': Icons.wb_sunny_rounded},
-        {'day': 'Tuesday', 'temp': '27°C', 'icon': Icons.wb_sunny_rounded},
-        {'day': 'Wednesday', 'temp': '25°C', 'icon': Icons.cloud_queue_rounded},
-        {'day': 'Thursday', 'temp': '23°C', 'icon': Icons.cloud_queue_rounded},
-        {'day': 'Friday', 'temp': '24°C', 'icon': Icons.wb_sunny_rounded},
-        {'day': 'Saturday', 'temp': '25°C', 'icon': Icons.wb_sunny_rounded},
-        {'day': 'Sunday', 'temp': '26°C', 'icon': Icons.wb_sunny_rounded},
-      ],
-    },
-    'istanbul': {
-      'city': 'Istanbul',
-      'country': 'Turkey',
-      'temp': '26°C',
-      'condition': 'Clear Sunny',
-      'wind': '14 km/h',
-      'humidity': '55%',
-      'hourly': [
-        {'time': 'Now', 'temp': '26°', 'icon': Icons.wb_sunny_rounded, 'highlight': true},
-        {'time': '12 PM', 'temp': '28°', 'icon': Icons.wb_sunny_rounded},
-        {'time': '2 PM', 'temp': '29°', 'icon': Icons.wb_sunny_rounded},
-        {'time': '4 PM', 'temp': '27°', 'icon': Icons.wb_sunny_rounded},
-        {'time': '6 PM', 'temp': '24°', 'icon': Icons.wb_sunny_outlined},
-      ],
-      'forecast': [
-        {'day': 'Monday', 'temp': '28°C', 'icon': Icons.wb_sunny_rounded},
-        {'day': 'Tuesday', 'temp': '29°C', 'icon': Icons.wb_sunny_rounded},
-        {'day': 'Wednesday', 'temp': '27°C', 'icon': Icons.wb_sunny_rounded},
-        {'day': 'Thursday', 'temp': '25°C', 'icon': Icons.cloud_queue_rounded},
-        {'day': 'Friday', 'temp': '24°C', 'icon': Icons.cloud_queue_rounded},
-        {'day': 'Saturday', 'temp': '26°C', 'icon': Icons.wb_sunny_rounded},
-        {'day': 'Sunday', 'temp': '28°C', 'icon': Icons.wb_sunny_rounded},
-      ],
-    },
-  };
+  @override
+  void initState() {
+    super.initState();
+    _fetchWeatherData(_selectedCity);
+  }
 
-  Map<String, dynamic> get _currentWeather {
-    final String key = _selectedCity.trim().toLowerCase();
-    return _weatherDatabase[key] ?? _weatherDatabase['rawalpindi']!;
+  // WMO codes mapping to conditions and icons
+  Map<String, dynamic> _mapWmoCodeToCondition(int code) {
+    switch (code) {
+      case 0:
+        return {'condition': 'Sunny Day', 'icon': Icons.wb_sunny_rounded};
+      case 1:
+      case 2:
+      case 3:
+        return {'condition': 'Partly Cloudy', 'icon': Icons.cloud_queue_rounded};
+      case 45:
+      case 48:
+        return {'condition': 'Foggy', 'icon': Icons.blur_on_rounded};
+      case 51:
+      case 53:
+      case 55:
+        return {'condition': 'Drizzle', 'icon': Icons.grain_rounded};
+      case 61:
+      case 63:
+      case 65:
+        return {'condition': 'Rainy Day', 'icon': Icons.grain_rounded};
+      case 71:
+      case 73:
+      case 75:
+        return {'condition': 'Snowfall', 'icon': Icons.ac_unit_rounded};
+      case 80:
+      case 81:
+      case 82:
+        return {'condition': 'Rain Showers', 'icon': Icons.grain_rounded};
+      case 95:
+      case 96:
+      case 99:
+        return {'condition': 'Thunderstorm', 'icon': Icons.thunderstorm_rounded};
+      default:
+        return {'condition': 'Clear Sunny', 'icon': Icons.wb_sunny_rounded};
+    }
+  }
+
+  Future<void> _fetchWeatherData(String cityName) async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // 1. Geocode City Name
+      final String geocodeUrl =
+          'https://geocoding-api.open-meteo.com/v1/search?name=${Uri.encodeComponent(cityName)}&count=1&language=en&format=json';
+      final geocodeResponse = await http.get(Uri.parse(geocodeUrl));
+
+      if (geocodeResponse.statusCode != 200) {
+        throw Exception('Failed to connect to geocoding API');
+      }
+
+      final geocodeData = jsonDecode(geocodeResponse.body);
+      if (geocodeData['results'] == null || (geocodeData['results'] as List).isEmpty) {
+        throw Exception('City "$cityName" not found. Please try another.');
+      }
+
+      final result = geocodeData['results'][0];
+      final double lat = result['latitude'];
+      final double lon = result['longitude'];
+      final String officialCityName = result['name'] ?? cityName;
+      final String countryName = result['country'] ?? '';
+
+      // 2. Fetch Forecast Details (current, hourly, daily)
+      final String weatherUrl =
+          'https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current_weather=true&hourly=temperature_2m,relative_humidity_2m,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto';
+      final weatherResponse = await http.get(Uri.parse(weatherUrl));
+
+      if (weatherResponse.statusCode != 200) {
+        throw Exception('Failed to fetch weather forecast data');
+      }
+
+      final weatherData = jsonDecode(weatherResponse.body);
+      final current = weatherData['current_weather'];
+      final currentCode = current['weathercode'] as int? ?? 0;
+      final currentInfo = _mapWmoCodeToCondition(currentCode);
+
+      // 3. Process Hourly Forecast (extract next 5 hours from current time index)
+      final List hourlyTimes = weatherData['hourly']['time'] ?? [];
+      final List hourlyTemps = weatherData['hourly']['temperature_2m'] ?? [];
+      final List hourlyCodes = weatherData['hourly']['weathercode'] ?? [];
+      final List hourlyHumidity = weatherData['hourly']['relative_humidity_2m'] ?? [];
+      
+      // Try to find the index corresponding to the current hour
+      final int utcOffset = weatherData['utc_offset_seconds'] ?? 0;
+      final DateTime nowLocal = DateTime.now().toUtc().add(Duration(seconds: utcOffset));
+      int startIdx = 0;
+      for (int i = 0; i < hourlyTimes.length; i++) {
+        try {
+          final DateTime t = DateTime.parse(hourlyTimes[i]);
+          if (t.isAfter(nowLocal.subtract(const Duration(minutes: 30)))) {
+            startIdx = i;
+            break;
+          }
+        } catch (_) {}
+      }
+
+      final List<Map<String, dynamic>> processedHourly = [];
+      for (int i = 0; i < 5; i++) {
+        final int dataIdx = startIdx + i;
+        if (dataIdx < hourlyTimes.length) {
+          final double tempVal = (hourlyTemps[dataIdx] as num).toDouble();
+          final int codeVal = hourlyCodes[dataIdx] as int? ?? 0;
+          final mapped = _mapWmoCodeToCondition(codeVal);
+
+          String timeLabel = '${dataIdx % 24}:00';
+          try {
+            final DateTime parsedTime = DateTime.parse(hourlyTimes[dataIdx]);
+            final int hour = parsedTime.hour;
+            if (hour == 0) {
+              timeLabel = '12 AM';
+            } else if (hour < 12) {
+              timeLabel = '$hour AM';
+            } else if (hour == 12) {
+              timeLabel = '12 PM';
+            } else {
+              timeLabel = '${hour - 12} PM';
+            }
+          } catch (_) {}
+
+          processedHourly.add({
+            'time': i == 0 ? 'Now' : timeLabel,
+            'temp': '${tempVal.round()}°',
+            'icon': mapped['icon'],
+            'highlight': i == 0,
+          });
+        }
+      }
+
+      // Get current humidity from hourly data
+      String humidityString = '60%';
+      if (startIdx < hourlyHumidity.length) {
+        humidityString = '${hourlyHumidity[startIdx]}%';
+      }
+
+      // 4. Process 7-day Daily Forecast
+      final List dailyTimes = weatherData['daily']['time'] ?? [];
+      final List dailyMaxTemps = weatherData['daily']['temperature_2m_max'] ?? [];
+      final List dailyCodes = weatherData['daily']['weathercode'] ?? [];
+
+      final List<Map<String, dynamic>> processedForecast = [];
+      final List<String> weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+      for (int i = 0; i < dailyTimes.length; i++) {
+        if (i < dailyMaxTemps.length && i < dailyCodes.length) {
+          final double maxTempVal = (dailyMaxTemps[i] as num).toDouble();
+          final int codeVal = dailyCodes[i] as int? ?? 0;
+          final mapped = _mapWmoCodeToCondition(codeVal);
+
+          String dayLabel = 'Day ${i + 1}';
+          try {
+            final DateTime date = DateTime.parse(dailyTimes[i]);
+            dayLabel = weekdays[date.weekday - 1];
+          } catch (_) {}
+
+          processedForecast.add({
+            'day': dayLabel,
+            'temp': '${maxTempVal.round()}°C',
+            'icon': mapped['icon'],
+          });
+        }
+      }
+
+      setState(() {
+        _selectedCity = officialCityName;
+        _liveWeatherData = {
+          'city': officialCityName,
+          'country': countryName,
+          'temp': '${(current['temperature'] as num).round()}°C',
+          'condition': currentInfo['condition'],
+          'wind': '${(current['windspeed'] as num).round()} km/h',
+          'humidity': humidityString,
+          'hourly': processedHourly,
+          'forecast': processedForecast,
+        };
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        _isLoading = false;
+      });
+    }
   }
 
   void _searchCity() {
     final query = _searchController.text.trim();
     if (query.isNotEmpty) {
-      final key = query.toLowerCase();
-      if (_weatherDatabase.containsKey(key)) {
-        setState(() {
-          _selectedCity = _weatherDatabase[key]!['city'];
-        });
-      } else {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Weather data for "$query" not found. Showing default.'),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-        setState(() {
-          _selectedCity = 'Rawalpindi';
-        });
-      }
+      _fetchWeatherData(query);
     }
   }
 
@@ -196,7 +223,7 @@ class _LiveWeatherScreenState extends State<LiveWeatherScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final weather = _currentWeather;
+    final weather = _liveWeatherData;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -267,13 +294,14 @@ class _LiveWeatherScreenState extends State<LiveWeatherScreen> {
                     'Tokyo',
                     'Istanbul',
                   ].map((city) {
-                    final bool isSelected = _selectedCity == city;
+                    final bool isSelected = _selectedCity.toLowerCase() == city.toLowerCase();
                     return GestureDetector(
                       onTap: () {
                         setState(() {
                           _selectedCity = city;
                           _searchController.text = city;
                         });
+                        _fetchWeatherData(city);
                       },
                       child: Container(
                         margin: const EdgeInsets.only(right: 8),
@@ -298,8 +326,40 @@ class _LiveWeatherScreenState extends State<LiveWeatherScreen> {
 
               const SizedBox(height: 24),
 
-              // ── Weather Card precisely matching aesthetic specs ──
-              Container(
+              if (_isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 80),
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF1E7E6C),
+                    ),
+                  ),
+                )
+              else if (_errorMessage != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 48),
+                        const SizedBox(height: 12),
+                        Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Color(0xFF374151),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (weather != null) ...[
+                // ── Weather Card precisely matching aesthetic specs ──
+                Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -577,6 +637,7 @@ class _LiveWeatherScreenState extends State<LiveWeatherScreen> {
                 }).toList(),
               ),
               const SizedBox(height: 30),
+              ],
             ],
           ),
         ),

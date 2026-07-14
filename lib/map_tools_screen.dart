@@ -3,9 +3,46 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/language_provider.dart';
+import 'services/location_service.dart';
 
 class MapToolsScreen extends ConsumerWidget {
   const MapToolsScreen({super.key});
+
+  void _onMyLocationTapped(BuildContext context, WidgetRef ref) async {
+    final tr = ref.read(translationProvider);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF1E7E6C),
+        ),
+      ),
+    );
+
+    try {
+      final coords = await LocationService.getCurrentLocation();
+      if (context.mounted) {
+        Navigator.pop(context); // Dismiss loading dialog
+        Navigator.pushNamed(
+          context,
+          '/street_view',
+          arguments: {
+            'locationName': tr['my_location'] ?? 'My Location',
+            'latitude': coords.latitude,
+            'longitude': coords.longitude,
+          },
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Dismiss loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${tr['could_not_get_location'] ?? 'Could not get current location: '}$e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -45,20 +82,17 @@ class MapToolsScreen extends ConsumerWidget {
               title: tr['3d_earth_map'] ?? '3D Earth Map',
               subtitle: tr['explore_planet_satellite'] ?? 'Explore the planet using live satellite data',
               bgColor: const Color(0xFFE6F4FF), // Pastel blue
-              iconAsset: 'assets/terrain.png',
+              iconAsset: 'assets/image 21.png',
               onTap: () {
-                Navigator.pushNamed(context, '/street_view');
+                Navigator.pushNamed(context, '/earth_map');
               },
             ),
             _MapToolCard(
               title: tr['my_location'] ?? 'My Location',
               subtitle: tr['find_current_position'] ?? 'Find your current position on the map',
               bgColor: const Color(0xFFFFF1F0), // Pastel coral/red
-              iconAsset: 'assets/loc.png',
-              iconColor: const Color(0xFFE53935), // Red pin to match
-              onTap: () {
-                Navigator.pushNamed(context, '/street_view');
-              },
+              iconAsset: 'assets/image 3.png',
+              onTap: () => _onMyLocationTapped(context, ref),
             ),
             _MapToolCard(
               title: tr['street_view'] ?? 'Street View',
@@ -75,7 +109,7 @@ class MapToolsScreen extends ConsumerWidget {
               bgColor: const Color(0xFFEBF8EA), // Pastel green
               iconAsset: 'assets/icon earth map.png', // Large globe asset resized
               onTap: () {
-                Navigator.pushNamed(context, '/asia');
+                Navigator.pushNamed(context, '/globe');
               },
             ),
             _MapToolCard(
@@ -118,7 +152,6 @@ class _MapToolCard extends StatelessWidget {
   final String subtitle;
   final Color bgColor;
   final String iconAsset;
-  final Color? iconColor;
   final VoidCallback onTap;
 
   const _MapToolCard({
@@ -126,7 +159,6 @@ class _MapToolCard extends StatelessWidget {
     required this.subtitle,
     required this.bgColor,
     required this.iconAsset,
-    this.iconColor,
     required this.onTap,
   });
 
@@ -148,12 +180,12 @@ class _MapToolCard extends StatelessWidget {
               right: 0,
               child: Image.asset(
                 iconAsset,
-                width: 44,
-                height: 44,
-                color: iconColor,
+                width: 56,
+                height: 56,
+                fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => Container(
-                  width: 44,
-                  height: 44,
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),

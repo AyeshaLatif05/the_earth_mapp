@@ -27,9 +27,11 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
   bool _trafficEnabled = false;
 
   bool _voiceGuidanceActive = false;
-  String _currentAddress = 'Loading location...';
-  LatLng _currentLatLng = const LatLng(41.0438, 29.0067);
+  String _currentAddress = 'Location here, Rawalpindi, Pakistan';
   bool _isLoading = false;
+
+  bool _showLocationCard = false;
+  bool _isListening = false;
 
   Future<String?> _fetchAddress(LatLng position) async {
     final lat = position.latitude;
@@ -57,7 +59,6 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
       final address = await _fetchAddress(coords);
       if (mounted) {
         setState(() {
-          _currentLatLng = coords;
           if (address != null) {
             _currentAddress = address;
           } else {
@@ -73,7 +74,7 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
       debugPrint('Error loading initial location: $e');
       if (mounted) {
         setState(() {
-          _currentAddress = 'Location: Lat 41.0438, Lng 29.0067';
+          _currentAddress = 'Location here, Rawalpindi, Pakistan';
           _isLoading = false;
         });
       }
@@ -85,6 +86,25 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialLocation();
+    });
+  }
+
+  // Simulated Speech Recognition Trigger
+  void _startListening() {
+    if (_isListening) return;
+    setState(() {
+      _isListening = true;
+    });
+
+    // Simulate listening for 1.5 seconds, then display the Rawalpindi location card
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) {
+        setState(() {
+          _isListening = false;
+          _currentAddress = 'Location here, Rawalpindi, Pakistan';
+          _showLocationCard = true;
+        });
+      }
     });
   }
 
@@ -151,7 +171,16 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
         scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (_showLocationCard) {
+              setState(() {
+                _showLocationCard = false;
+                _voiceGuidanceActive = false;
+              });
+            } else {
+              Navigator.pop(context);
+            }
+          },
         ),
         title: const Text(
           'Voice Navigation',
@@ -180,15 +209,13 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
               ),
             ),
 
-            // ── Left Side Map Layer Controls ──
+            // ── Left Side Map Layer Controls (Stacked above bottom sheet/mic) ──
             Positioned(
               left: 14,
-              top: 14,
+              bottom: _showLocationCard ? 180 : 100,
               child: Column(
                 children: [
                   _buildCircleControl(
-                    icon: Icons.view_in_ar,
-                    isActive: _is3DView,
                     onTap: () {
                       setState(() {
                         _is3DView = !_is3DView;
@@ -215,6 +242,27 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
                         }
                       });
                     },
+                    isActive: _is3DView,
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: _is3DView ? Colors.white : const Color(0xFF111111),
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '3D',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: _is3DView ? Colors.white : const Color(0xFF111111),
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   _buildCircleControl(
@@ -242,10 +290,10 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
               ),
             ),
 
-            // ── Right Side Navigation Zoom Controls ──
+            // ── Right Side Navigation Zoom Controls (Stacked above bottom sheet/mic) ──
             Positioned(
               right: 14,
-              top: 14,
+              bottom: _showLocationCard ? 180 : 100,
               child: Column(
                 children: [
                   _buildCircleControl(
@@ -263,7 +311,7 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
                   ),
                   const SizedBox(height: 10),
                   _buildCircleControl(
-                    icon: Icons.my_location,
+                    icon: Icons.gps_fixed_rounded,
                     iconColor: const Color(0xFF1E7E6C),
                     onTap: () async {
                       if (_isLoading) return;
@@ -275,13 +323,13 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
                         final address = await _fetchAddress(coords);
                         if (mounted) {
                           setState(() {
-                            _currentLatLng = coords;
                             if (address != null) {
                               _currentAddress = address;
                             } else {
                               _currentAddress = 'Lat: ${coords.latitude.toStringAsFixed(4)}, Lng: ${coords.longitude.toStringAsFixed(4)}';
                             }
                             _isLoading = false;
+                            _showLocationCard = true;
                           });
                           _mapController?.animateCamera(
                             CameraUpdate.newLatLng(coords),
@@ -291,6 +339,8 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
                         debugPrint('Error getting current location: $e');
                         setState(() {
                           _isLoading = false;
+                          _currentAddress = 'Location here, Rawalpindi, Pakistan';
+                          _showLocationCard = true;
                         });
                       }
                     },
@@ -302,9 +352,9 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
             // ── Simulated Voice Guidance Speech Bubble Overlay ──
             if (_voiceGuidanceActive)
               Positioned(
-                top: 200,
-                left: 32,
-                right: 32,
+                top: 16,
+                left: 20,
+                right: 20,
                 child: TweenAnimationBuilder(
                   duration: const Duration(milliseconds: 300),
                   tween: Tween<double>(begin: 0.0, end: 1.0),
@@ -312,7 +362,7 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
                     return Opacity(
                       opacity: value,
                       child: Transform.scale(
-                        scale: 0.9 + (value * 0.1),
+                        scale: 0.95 + (value * 0.05),
                         child: child,
                       ),
                     );
@@ -366,126 +416,216 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
                 ),
               ),
 
-            // ── GPS Bottom Details Panel ──
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(24),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 15,
-                      offset: Offset(0, -4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Location pin and address row
-                    Row(
+            // ── Microphone Pulse Button (State 1) ──
+            if (!_showLocationCard)
+              Positioned(
+                bottom: 30,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: GestureDetector(
+                    onTap: _startListening,
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        Image.asset(
-                          'assets/loc.png',
-                          width: 28,
-                          height: 28,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.location_on,
-                            color: Color(0xFFE53935),
-                            size: 26,
+                        // Outermost ripple ring
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: _isListening ? 110 : 96,
+                          height: _isListening ? 110 : 96,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E7E6C).withOpacity(0.12),
+                            shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Location',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Color(0xFF9CA3AF),
-                                  fontWeight: FontWeight.w400,
-                                ),
+                        // Middle ripple ring
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: _isListening ? 92 : 78,
+                          height: _isListening ? 92 : 78,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E7E6C).withOpacity(0.24),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        // Inner button
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
                               ),
-                              const SizedBox(height: 4),
-                              _isLoading
-                                  ? const Text(
-                                      'Fetching location...',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF888888),
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                    )
-                                  : Text(
-                                      _currentAddress,
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF111111),
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
                             ],
                           ),
+                          child: Icon(
+                            _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                            color: const Color(0xFF1E7E6C),
+                            size: 32,
+                          ),
                         ),
-                        IconButton(
-                          icon: Image.asset(
-                            'assets/share-2.png',
-                            width: 20,
-                            height: 20,
-                            errorBuilder: (_, __, ___) => const Icon(
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+            // ── Listening text overlay ──
+            if (_isListening)
+              Positioned(
+                bottom: 145,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E7E6C).withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Text(
+                      'Listening...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // ── Bottom Details Sheet Panel (State 2) ──
+            if (_showLocationCard)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 15,
+                        offset: Offset(0, -4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Location pin and address row
+                      Row(
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFFF1F0),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.location_on,
+                              color: Color(0xFFE53935),
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Location',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF9CA3AF),
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                _isLoading
+                                    ? const Text(
+                                        'Fetching location...',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF888888),
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      )
+                                    : Text(
+                                        _currentAddress,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF111111),
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
                               Icons.share_outlined,
                               color: Color(0xFF111111),
                               size: 22,
                             ),
+                            onPressed: _shareLocation,
                           ),
-                          onPressed: _shareLocation,
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
 
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
-                    // Start Navigation Large Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _toggleVoiceNavigation,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1E7E6C),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                      // Start Navigation Large Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          onPressed: _toggleVoiceNavigation,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1E7E6C),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
-                        ),
-                        child: Text(
-                          _voiceGuidanceActive ? 'Stop Navigation' : 'Start Navigation',
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.1,
+                          child: Text(
+                            _voiceGuidanceActive ? 'Stop Navigation' : 'Start Navigation',
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.1,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -494,7 +634,8 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
 
   // Floating Circle map controller helper widget
   Widget _buildCircleControl({
-    required IconData icon,
+    IconData? icon,
+    Widget? child,
     required VoidCallback onTap,
     bool isActive = false,
     Color iconColor = const Color(0xFF111111),
@@ -515,10 +656,12 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen> {
             ),
           ],
         ),
-        child: Icon(
-          icon,
-          color: isActive ? Colors.white : iconColor,
-          size: 22,
+        child: Center(
+          child: child ?? Icon(
+            icon,
+            color: isActive ? Colors.white : iconColor,
+            size: 22,
+          ),
         ),
       ),
     );

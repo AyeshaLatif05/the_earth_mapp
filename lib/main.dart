@@ -31,6 +31,8 @@ import 'compass_screen.dart';
 import 'live_weather_screen.dart';
 import 'gps_camera_screen.dart';
 import 'find_distance_screen.dart';
+import 'globe_screen.dart';
+import 'earth_map_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -106,6 +108,8 @@ class MyApp extends ConsumerWidget {
         '/live_weather': (context) => const LiveWeatherScreen(),
         '/gps_camera': (context) => const GPSCameraScreen(),
         '/find_distance': (context) => const FindDistanceScreen(),
+        '/globe': (context) => const GlobeScreen(),
+        '/earth_map': (context) => const EarthMapScreen(),
       },
     );
   }

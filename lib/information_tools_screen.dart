@@ -45,7 +45,7 @@ class InformationToolsScreen extends ConsumerWidget {
               title: tr['live_sensor'] ?? 'Live Sensor',
               subtitle: tr['real_time_sensor_data'] ?? 'Real-time data from your device sensors',
               bgColor: const Color(0xFFFFF0E6), // Pastel orange
-              iconAsset: 'assets/speed.png',
+              iconAsset: 'assets/image 18.png',
               onTap: () {
                 Navigator.pushNamed(context, '/live_sensor');
               },
@@ -54,7 +54,7 @@ class InformationToolsScreen extends ConsumerWidget {
               title: tr['oxygen_level'] ?? 'Oxygen Level',
               subtitle: tr['monitor_oxygen_quality'] ?? 'Monitor oxygen level and air quality',
               bgColor: const Color(0xFFE8EDF8), // Pastel blue/grey
-              iconAsset: 'assets/windy.png',
+              iconAsset: 'assets/image 14.png',
               onTap: () {
                 Navigator.pushNamed(context, '/oxygen_level');
               },
@@ -145,11 +145,12 @@ class _InfoToolCard extends StatelessWidget {
               right: 0,
               child: Image.asset(
                 iconAsset,
-                width: 44,
-                height: 44,
+                width: 56,
+                height: 56,
+                fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => Container(
-                  width: 44,
-                  height: 44,
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
