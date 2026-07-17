@@ -35,14 +35,15 @@ class MapToolsScreen extends StatelessWidget {
       title: 'Meet in Middle',
       subtitle: 'Discover a midpoint between locations',
       bgColor: Color(0xFFFCECEC),
-      iconAsset: 'assets/Frame.png',
+      iconAsset: 'assets/road_intersection.png',
     ),
     _ToolItem(
       title: 'Voice Navigation',
       subtitle: 'Let voice guide you on your route',
       bgColor: Color(0xFFFFFBE6),
-      iconAsset: 'assets/Rotate.png',
+      iconAsset: 'assets/voice_navigation.png',
     ),
+
     _ToolItem(
       title: 'Your Parking',
       subtitle: 'Stores your parking spot for quick access',

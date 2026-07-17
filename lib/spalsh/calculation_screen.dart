@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/travel_provider.dart';
+
 
 class CalculationToolsScreen extends StatelessWidget {
   const CalculationToolsScreen({super.key});
@@ -133,9 +133,8 @@ class _ToolCard extends ConsumerWidget {
         } else if (tool.title == 'Find Distance') {
           Navigator.pushNamed(context, '/find_distance');
         } else if (tool.title == 'Find Traffic') {
-          ref.read(activeTabProvider.notifier).state = 2; // Location tab
-          ref.read(trafficLayerProvider.notifier).state = true; // Traffic layer active
-          Navigator.pushNamed(context, '/asia');
+          Navigator.pushNamed(context, '/traffic_finder');
+
         } else {
           ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(

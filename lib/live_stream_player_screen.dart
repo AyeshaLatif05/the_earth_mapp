@@ -212,8 +212,32 @@ class _LiveStreamPlayerScreenState extends State<LiveStreamPlayerScreen> {
                           child: Image.network(
                             _activeCamera['imageUrl'],
                             fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: const Color(0xFF111111),
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Color(0xFF1E7E6C),
+                                  ),
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: const Color(0xFF111111),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.error_outline_rounded,
+                                    color: Colors.white54,
+                                    size: 32,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
+
 
                         // Play/Pause circular toggle overlay
                         Center(

@@ -399,7 +399,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                         bgColor: const Color(0xFFE6F4FF),
                                         iconAsset: 'assets/image 21.png',
                                         onTap: () => Navigator.pushNamed(
-                                            context, '/street_view'),
+                                            context, '/earth_map'),
+
                                       ),
                                     ),
                                     const SizedBox(width: 12),
@@ -450,11 +451,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                             'See real-time traffic updates on your route',
                                         bgColor: const Color(0xFFFEFBE8),
                                         iconAsset: 'assets/image 11.png',
-                                        onTap: () {
-                                          ref.read(activeTabProvider.notifier).state = 2; // Location tab
-                                          ref.read(trafficLayerProvider.notifier).state = true; // Traffic layer active
-                                          Navigator.pushNamed(context, '/asia');
-                                        },
+                                        onTap: () => Navigator.pushNamed(
+                                            context, '/traffic_finder'),
                                       ),
                                     ),
                                   ],

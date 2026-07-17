@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'services/location_service.dart';
 
 class LiveWeatherScreen extends StatefulWidget {
   const LiveWeatherScreen({super.key});
@@ -19,8 +20,44 @@ class _LiveWeatherScreenState extends State<LiveWeatherScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchWeatherData(_selectedCity);
+    _loadCurrentLocationWeather();
   }
+
+  void _loadCurrentLocationWeather() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final coords = await LocationService.getCurrentLocation();
+      final String geocodeUrl =
+          'https://nominatim.openstreetmap.org/reverse?lat=${coords.latitude}&lon=${coords.longitude}&format=json';
+      final headers = {'User-Agent': 'LiveEarthMap/1.0 (contact@example.com)'};
+      final response = await http.get(Uri.parse(geocodeUrl), headers: headers).timeout(const Duration(seconds: 4));
+      
+      String city = 'Rawalpindi';
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final address = data['address'];
+        if (address != null) {
+          city = address['city'] ?? address['town'] ?? address['village'] ?? address['county'] ?? 'Rawalpindi';
+        }
+      }
+      
+      if (mounted) {
+        setState(() {
+          _selectedCity = city;
+          _searchController.text = city;
+        });
+        _fetchWeatherData(city);
+      }
+    } catch (e) {
+      debugPrint('Failed to reverse-geocode coordinates in weather screen launch: $e');
+      if (mounted) {
+        _fetchWeatherData(_selectedCity);
+      }
+    }
+  }
+
 
   // WMO codes mapping to conditions and icons
   Map<String, dynamic> _mapWmoCodeToCondition(int code) {
@@ -59,17 +96,35 @@ class _LiveWeatherScreenState extends State<LiveWeatherScreen> {
     }
   }
 
-  Future<void> _fetchWeatherData(String cityName) async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  static final Map<String, Map<String, dynamic>> _weatherCache = {};
+
+  Future<void> _fetchWeatherData(String cityName, {bool silent = false}) async {
+    final String cacheKey = cityName.toLowerCase().trim();
+    if (_weatherCache.containsKey(cacheKey) && !silent) {
+      setState(() {
+        _selectedCity = _weatherCache[cacheKey]!['city'];
+        _liveWeatherData = _weatherCache[cacheKey];
+        _isLoading = false;
+        _errorMessage = null;
+      });
+      // Fetch fresh data in the background silently
+      _fetchWeatherData(cityName, silent: true);
+      return;
+    }
+
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       // 1. Geocode City Name
       final String geocodeUrl =
           'https://geocoding-api.open-meteo.com/v1/search?name=${Uri.encodeComponent(cityName)}&count=1&language=en&format=json';
       final geocodeResponse = await http.get(Uri.parse(geocodeUrl));
+
 
       if (geocodeResponse.statusCode != 200) {
         throw Exception('Failed to connect to geocoding API');
@@ -186,20 +241,25 @@ class _LiveWeatherScreenState extends State<LiveWeatherScreen> {
         }
       }
 
+      final Map<String, dynamic> processedData = {
+        'city': officialCityName,
+        'country': countryName,
+        'temp': '${(current['temperature'] as num).round()}°C',
+        'condition': currentInfo['condition'],
+        'wind': '${(current['windspeed'] as num).round()} km/h',
+        'humidity': humidityString,
+        'hourly': processedHourly,
+        'forecast': processedForecast,
+      };
+
+      _weatherCache[cacheKey] = processedData;
+
       setState(() {
         _selectedCity = officialCityName;
-        _liveWeatherData = {
-          'city': officialCityName,
-          'country': countryName,
-          'temp': '${(current['temperature'] as num).round()}°C',
-          'condition': currentInfo['condition'],
-          'wind': '${(current['windspeed'] as num).round()} km/h',
-          'humidity': humidityString,
-          'hourly': processedHourly,
-          'forecast': processedForecast,
-        };
+        _liveWeatherData = processedData;
         _isLoading = false;
       });
+
     } catch (e) {
       setState(() {
         _errorMessage = e.toString().replaceAll('Exception: ', '');

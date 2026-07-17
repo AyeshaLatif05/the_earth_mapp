@@ -15,6 +15,7 @@ class _StreetViewScreenState extends State<StreetViewScreen> {
   GoogleMapController? _mapController;
   bool _isFullscreen = false;
   String _placeName = 'Place Name Here';
+  late final ScrollController _scrollController;
 
   // Current camera/marker position: Beşiktaş, Istanbul (mockup matching)
   static const LatLng _besiktasLatLng = LatLng(41.0438, 29.0067);
@@ -34,6 +35,7 @@ class _StreetViewScreenState extends State<StreetViewScreen> {
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController(initialScrollOffset: 300);
     _markers.add(
       Marker(
         markerId: const MarkerId('street_view_pos'),
@@ -41,6 +43,12 @@ class _StreetViewScreenState extends State<StreetViewScreen> {
         infoWindow: const InfoWindow(title: 'Street View Camera'),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _loadMyLocation() async {
@@ -239,7 +247,7 @@ class _StreetViewScreenState extends State<StreetViewScreen> {
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
                       // Center the starting scroll position
-                      controller: ScrollController(initialScrollOffset: 300),
+                      controller: _scrollController,
                       child: Image.network(
                         _panoramas[_selectedPanoramaIndex],
                         height: double.infinity,

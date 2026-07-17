@@ -116,7 +116,7 @@ class MapToolsScreen extends ConsumerWidget {
               title: tr['meet_in_middle'] ?? 'Meet in Middle',
               subtitle: tr['discover_midpoint'] ?? 'Discover a midpoint between locations',
               bgColor: const Color(0xFFFFF0E6), // Pastel orange/peach
-              iconAsset: 'assets/Frame.png', // Custom icon fallback
+              iconAsset: 'assets/road_intersection.png',
               onTap: () {
                 Navigator.pushNamed(context, '/meet_in_middle');
               },
@@ -125,11 +125,12 @@ class MapToolsScreen extends ConsumerWidget {
               title: tr['voice_navigation'] ?? 'Voice Navigation',
               subtitle: tr['voice_guide_route'] ?? 'Let voice guide you on your route',
               bgColor: const Color(0xFFFEFBE8), // Pastel yellow/cream
-              iconAsset: 'assets/Rotate.png',
+              iconAsset: 'assets/voice_navigation.png',
               onTap: () {
                 Navigator.pushNamed(context, '/voice_navigation');
               },
             ),
+
             _MapToolCard(
               title: tr['your_parking'] ?? 'Your Parking',
               subtitle: tr['store_parking_spot'] ?? 'Stores your parking spot for quick access',

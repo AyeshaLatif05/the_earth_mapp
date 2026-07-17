@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'providers/travel_provider.dart';
 
 class AsiaScreen extends ConsumerStatefulWidget {
@@ -18,6 +20,125 @@ class _AsiaScreenState extends ConsumerState<AsiaScreen> {
 
   // Local widget controllers are kept locally as they hold direct view handles
   GoogleMapController? _mapController;
+
+  int? _lastLoadedPlaceIndex;
+  Map<String, dynamic>? _dynamicWeather;
+  bool _isWeatherLoading = false;
+
+  Future<void> _fetchWeatherForCoordinates(double lat, double lng) async {
+    if (!mounted) return;
+    setState(() {
+      _isWeatherLoading = true;
+    });
+
+    try {
+      final String weatherUrl =
+          'https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lng&current_weather=true&hourly=temperature_2m,relative_humidity_2m,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto';
+      final response = await http.get(Uri.parse(weatherUrl)).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final current = data['current_weather'];
+        final currentCode = current['weathercode'] as int? ?? 0;
+        
+        String condition = 'Sunny';
+        IconData icon = Icons.wb_sunny_rounded;
+        switch (currentCode) {
+          case 0:
+            condition = 'Sunny'; icon = Icons.wb_sunny_rounded; break;
+          case 1:
+          case 2:
+          case 3:
+            condition = 'Partly Cloudy'; icon = Icons.cloud_queue_rounded; break;
+          case 45:
+          case 48:
+            condition = 'Foggy'; icon = Icons.blur_on_rounded; break;
+          case 51:
+          case 53:
+          case 55:
+          case 61:
+          case 63:
+          case 65:
+          case 80:
+          case 81:
+          case 82:
+            condition = 'Rainy'; icon = Icons.grain_rounded; break;
+          case 71:
+          case 73:
+          case 75:
+            condition = 'Snowy'; icon = Icons.ac_unit_rounded; break;
+          case 95:
+          case 96:
+          case 99:
+            condition = 'Thunderstorm'; icon = Icons.thunderstorm_rounded; break;
+        }
+
+        // Process hourly
+        final List temp2m = data['hourly']['temperature_2m'] ?? [];
+        final List times = data['hourly']['time'] ?? [];
+        final List codes = data['hourly']['weathercode'] ?? [];
+        final List<Map<String, dynamic>> hourly = [];
+        for (int i = 0; i < 5; i++) {
+          if (i < temp2m.length) {
+            String timeLabel = '${(12 + i) % 24}:00';
+            try {
+              final DateTime parsed = DateTime.parse(times[i]);
+              final int hr = parsed.hour;
+              timeLabel = hr == 0 ? '12 AM' : hr < 12 ? '$hr AM' : hr == 12 ? '12 PM' : '${hr - 12} PM';
+            } catch (_) {}
+            hourly.add({
+              'temp': '${(temp2m[i] as num).round()}°C',
+              'time': i == 0 ? 'Now' : timeLabel,
+              'icon': icon,
+            });
+          }
+        }
+
+        // Process daily max
+        final List dailyMax = data['daily']['temperature_2m_max'] ?? [];
+        final List dailyTime = data['daily']['time'] ?? [];
+        final List<Map<String, dynamic>> forecast = [];
+        final weekdays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+        for (int i = 0; i < dailyMax.length; i++) {
+          if (i < dailyMax.length) {
+            String dayLabel = 'Day ${i + 1}';
+            try {
+              final parsed = DateTime.parse(dailyTime[i]);
+              dayLabel = weekdays[parsed.weekday - 1];
+            } catch (_) {}
+            forecast.add({
+              'day': dayLabel,
+              'temp': '${(dailyMax[i] as num).round()}°',
+              'icon': Icons.wb_sunny_rounded,
+            });
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            _dynamicWeather = {
+              'temp': '${(current['temperature'] as num).round()}°',
+              'condition': condition,
+              'wind': '${(current['windspeed'] as num).round()} km/h',
+              'humidity': '52%',
+              'hourly': hourly,
+              'forecast': forecast,
+            };
+            _isWeatherLoading = false;
+          });
+        }
+        return;
+      }
+    } catch (e) {
+      debugPrint('Dynamic weather load failed for Asia screen: $e');
+    }
+
+    if (mounted) {
+      setState(() {
+        _isWeatherLoading = false;
+      });
+    }
+  }
 
   // The primary theme color of the app
   final Color _primaryColor = const Color(0xFF1E7E6C);
@@ -193,6 +314,19 @@ class _AsiaScreenState extends ConsumerState<AsiaScreen> {
     final activePlaceIndex = ref.watch(activePlaceIndexProvider);
     final activeTab = ref.watch(activeTabProvider);
     final activePlace = _destinations[activePlaceIndex];
+
+    // Dynamic Weather Trigger
+    if (_lastLoadedPlaceIndex != activePlaceIndex) {
+      _lastLoadedPlaceIndex = activePlaceIndex;
+      _dynamicWeather = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fetchWeatherForCoordinates(activePlace['latitude'], activePlace['longitude']);
+      });
+    } else if (_dynamicWeather == null && !_isWeatherLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fetchWeatherForCoordinates(activePlace['latitude'], activePlace['longitude']);
+      });
+    }
     
     // Dynamic AppBar title based on the active tab!
     // Travel tab -> "Asia", other tabs -> active Destination name (e.g. "Petra", "Passu Cones")
@@ -387,7 +521,7 @@ class _AsiaScreenState extends ConsumerState<AsiaScreen> {
 
   // ── TAB 1: WEATHER VIEW (Fully Redesigned to Match Third Screenshot Specs) ──
   Widget _buildWeatherTab(Map<String, dynamic> place) {
-    final weather = place['weather'];
+    final weather = _dynamicWeather ?? place['weather'];
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -395,6 +529,13 @@ class _AsiaScreenState extends ConsumerState<AsiaScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (_isWeatherLoading && _dynamicWeather == null)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 12),
+                child: CircularProgressIndicator(color: Color(0xFF1E7E6C)),
+              ),
+            ),
           // ── Main Header Row: 3D Icon on Left, Temp/Stats on Right ──
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -1064,29 +1205,35 @@ class _AsiaScreenState extends ConsumerState<AsiaScreen> {
                     itemCount: _destinations.length,
                     itemBuilder: (context, index) {
                       final item = _destinations[index];
-                      return Image.network(
-                        item['images'][0], // Use first premium image
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Container(
-                            color: const Color(0xFFF3F4F6),
-                            child: const Center(
-                              child: CircularProgressIndicator(color: Color(0xFF1E7E6C)),
-                            ),
-                          );
+                      return GestureDetector(
+                        onTap: () {
+                          // Switch to the Information tab (index 0) for this destination!
+                          ref.read(activeTabProvider.notifier).state = 0;
                         },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: const Color(0xFFE5E7EB),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.image_not_supported_outlined,
-                              size: 64,
-                              color: Colors.grey,
-                            ),
-                          );
-                        },
+                        child: Image.network(
+                          item['images'][0], // Use first premium image
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              color: const Color(0xFFF3F4F6),
+                              child: const Center(
+                                child: CircularProgressIndicator(color: Color(0xFF1E7E6C)),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: const Color(0xFFE5E7EB),
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.image_not_supported_outlined,
+                                size: 64,
+                                color: Colors.grey,
+                              ),
+                            );
+                          },
+                        ),
                       );
                     },
                   ),

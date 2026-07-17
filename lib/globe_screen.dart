@@ -1,5 +1,8 @@
-import 'dart:math';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'services/location_service.dart';
 
 class GlobeScreen extends StatefulWidget {
   const GlobeScreen({super.key});
@@ -8,81 +11,113 @@ class GlobeScreen extends StatefulWidget {
   State<GlobeScreen> createState() => _GlobeScreenState();
 }
 
-class _GlobeScreenState extends State<GlobeScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _rotationController;
-  final TransformationController _transformationController = TransformationController();
+class _GlobeScreenState extends State<GlobeScreen> {
+  GoogleMapController? _mapController;
   final TextEditingController _searchController = TextEditingController();
-
-  double _currentScale = 1.0;
-  final List<Point<double>> _stars = [];
-
-  @override
-  void initState() {
-    super.initState();
-    // 50 seconds per rotation for a slow, premium movement
-    _rotationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 50),
-    )..repeat();
-
-    // Generate random stars for the background
-    final random = Random();
-    for (int i = 0; i < 120; i++) {
-      _stars.add(Point(random.nextDouble(), random.nextDouble()));
-    }
-  }
+  
+  MapType _mapType = MapType.satellite;
+  bool _isLoading = false;
+  LatLng _mapCenter = const LatLng(0.0, 0.0); // Center of the Earth view
+  final Set<Marker> _markers = {};
 
   @override
   void dispose() {
-    _rotationController.dispose();
-    _transformationController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  void _zoom(double factor) {
-    setState(() {
-      _currentScale = (_currentScale * factor).clamp(0.5, 3.0);
-      _transformationController.value = Matrix4.identity()..scale(_currentScale);
-    });
+  void _zoomIn() {
+    _mapController?.animateCamera(CameraUpdate.zoomIn());
   }
 
-  void _resetZoom() {
-    setState(() {
-      _currentScale = 1.0;
-      _transformationController.value = Matrix4.identity();
-    });
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Position and zoom reset'),
-        duration: Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  void _zoomOut() {
+    _mapController?.animateCamera(CameraUpdate.zoomOut());
   }
 
-  void _onSearch(String query) {
+  void _recenterGPS() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final coords = await LocationService.getCurrentLocation();
+      setState(() {
+        _mapCenter = coords;
+        _markers.clear();
+        _markers.add(
+          Marker(
+            markerId: const MarkerId('my_pos'),
+            position: coords,
+            infoWindow: const InfoWindow(title: 'My Location'),
+          ),
+        );
+        _isLoading = false;
+      });
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(coords, 14.0),
+      );
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not retrieve current location')),
+      );
+    }
+  }
+
+  void _onSearch(String query) async {
     if (query.trim().isEmpty) return;
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Searching for "$query"... Centering globe.'),
-        backgroundColor: const Color(0xFF1E7E6C),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-    // Simulate focusing/zooming on searched spot
     setState(() {
-      _currentScale = 1.6;
-      _transformationController.value = Matrix4.identity()..scale(_currentScale);
+      _isLoading = true;
     });
+
+    try {
+      final searchUri = Uri.parse('https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=json&limit=1');
+      final headers = {'User-Agent': 'LiveEarthMap/1.0 (contact@example.com)'};
+      final response = await http.get(searchUri, headers: headers).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        if (data.isNotEmpty) {
+          final lat = double.tryParse(data[0]['lat']?.toString() ?? '');
+          final lon = double.tryParse(data[0]['lon']?.toString() ?? '');
+          if (lat != null && lon != null) {
+            final target = LatLng(lat, lon);
+            setState(() {
+              _mapCenter = target;
+              _markers.clear();
+              _markers.add(
+                Marker(
+                  markerId: const MarkerId('search_pos'),
+                  position: target,
+                  infoWindow: InfoWindow(title: query),
+                ),
+              );
+              _isLoading = false;
+            });
+            _mapController?.animateCamera(
+              CameraUpdate.newLatLngZoom(target, 12.0),
+            );
+            return;
+          }
+        }
+      }
+      throw Exception('Location not found');
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not find location: $query')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -104,58 +139,22 @@ class _GlobeScreenState extends State<GlobeScreen> with SingleTickerProviderStat
       ),
       body: Stack(
         children: [
-          // ── 1. Starry Night Sky Background Painter ──
+          // ── Real Earth Map View ──
           Positioned.fill(
-            child: CustomPaint(
-              painter: StarrySkyPainter(stars: _stars),
-            ),
-          ),
-
-          // ── 2. Rotating Glowing Earth Globe ──
-          Positioned.fill(
-            child: Center(
-              child: SizedBox(
-                width: 320,
-                height: 320,
-                child: InteractiveViewer(
-                  transformationController: _transformationController,
-                  minScale: 0.5,
-                  maxScale: 3.0,
-                  onInteractionUpdate: (details) {
-                    // Update scale state tracking
-                    _currentScale = _transformationController.value.getMaxScaleOnAxis();
-                  },
-                  child: Center(
-                    child: RotationTransition(
-                      turns: _rotationController,
-                      child: Image.asset(
-                        'assets/Globe Component.png',
-                        width: 310,
-                        height: 310,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 250,
-                            height: 250,
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.blue, width: 2),
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.public, color: Colors.white, size: 64),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: _mapCenter,
+                zoom: 2.2, // Zoomed out to show the earth like a globe
               ),
+              mapType: _mapType,
+              markers: _markers,
+              zoomControlsEnabled: false,
+              myLocationButtonEnabled: false,
+              onMapCreated: (controller) => _mapController = controller,
             ),
           ),
 
-          // ── 3. Floating Top Search Location Bar ──
+          // ── Floating Search Location Bar ──
           Positioned(
             top: 16,
             left: 16,
@@ -165,11 +164,11 @@ class _GlobeScreenState extends State<GlobeScreen> with SingleTickerProviderStat
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(
-                    color: Colors.black26,
+                    color: Colors.black.withOpacity(0.08),
                     blurRadius: 8,
-                    offset: Offset(0, 2),
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -191,12 +190,36 @@ class _GlobeScreenState extends State<GlobeScreen> with SingleTickerProviderStat
                       ),
                     ),
                   ),
+                  if (_isLoading)
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1E7E6C)),
+                    ),
                 ],
               ),
             ),
           ),
 
-          // ── 4. Zoom & Recenter Control Column ──
+          // ── Left Side Control Button (Map Type Selector) ──
+          Positioned(
+            left: 16,
+            bottom: 24,
+            child: _buildCircleControl(
+              icon: Icons.layers_outlined,
+              onTap: () {
+                setState(() {
+                  _mapType = _mapType == MapType.satellite
+                      ? MapType.hybrid
+                      : _mapType == MapType.hybrid
+                          ? MapType.normal
+                          : MapType.satellite;
+                });
+              },
+            ),
+          ),
+
+          // ── Zoom & Recenter Control Column ──
           Positioned(
             right: 16,
             bottom: 24,
@@ -205,18 +228,18 @@ class _GlobeScreenState extends State<GlobeScreen> with SingleTickerProviderStat
               children: [
                 _buildCircleControl(
                   icon: Icons.add,
-                  onTap: () => _zoom(1.2),
+                  onTap: _zoomIn,
                 ),
                 const SizedBox(height: 10),
                 _buildCircleControl(
                   icon: Icons.remove,
-                  onTap: () => _zoom(0.8),
+                  onTap: _zoomOut,
                 ),
                 const SizedBox(height: 10),
                 _buildCircleControl(
                   icon: Icons.gps_fixed_rounded,
                   iconColor: const Color(0xFF1E7E6C),
-                  onTap: _resetZoom,
+                  onTap: _recenterGPS,
                 ),
               ],
             ),
@@ -226,7 +249,6 @@ class _GlobeScreenState extends State<GlobeScreen> with SingleTickerProviderStat
     );
   }
 
-  // Floating Circle Control Helper Widget
   Widget _buildCircleControl({
     required IconData icon,
     required VoidCallback onTap,
@@ -256,31 +278,4 @@ class _GlobeScreenState extends State<GlobeScreen> with SingleTickerProviderStat
       ),
     );
   }
-}
-
-// ── Custom Painter to render background stars ──
-class StarrySkyPainter extends CustomPainter {
-  final List<Point<double>> stars;
-
-  StarrySkyPainter({required this.stars});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 1.0;
-
-    for (final star in stars) {
-      final x = star.x * size.width;
-      final y = star.y * size.height;
-      // Draw standard stars of varying size/alpha based on coordinates
-      final alpha = (star.x * 200 + 55).toInt().clamp(0, 255);
-      paint.color = Colors.white.withAlpha(alpha);
-      final radius = (star.y * 1.5 + 0.5);
-      canvas.drawCircle(Offset(x, y), radius, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

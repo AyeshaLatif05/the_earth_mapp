@@ -10,48 +10,78 @@ class LiveSensorScreen extends StatefulWidget {
 }
 
 class _LiveSensorScreenState extends State<LiveSensorScreen> {
-  // Timer to animate telemetry values slightly to simulate live tracking
-  Timer? _simulationTimer;
+  Timer? _sensorTimer;
   final math.Random _random = math.Random();
 
-  // Simulated live metrics
-  double _heading = 120.0;
-  double _tiltX = 1.2;
-  double _tiltY = -2.4;
-  double _altitude = 542.0;
-  double _oxygen = 98.0;
+  // Dynamic state values to simulate live ticking sensors
+  double _accX = 0.05;
+  double _accY = -0.12;
+  double _accZ = 9.81;
+
+  double _gravX = 0.00;
+  double _gravY = 0.00;
+  double _gravZ = 9.80;
+
+  double _gyroX = 0.01;
+  double _gyroY = -0.02;
+  double _gyroZ = 0.00;
+
+  double _lightX = 24.5;
+  double _lightY = 0.0;
+  double _lightZ = 0.0;
+
+  double _linAccX = 0.02;
+  double _linAccY = -0.04;
+  double _linAccZ = 0.01;
+
+  double _magX = 42.1;
+  double _magY = -15.4;
+  double _magZ = -28.9;
+
+  double _orientX = 120.4;
+  double _orientY = 1.2;
+  double _orientZ = -2.5;
 
   @override
   void initState() {
     super.initState();
-    _simulationTimer = Timer.periodic(const Duration(milliseconds: 1200), (timer) {
+    // Simulate active sensor data streams changing in real time (250ms interval)
+    _sensorTimer = Timer.periodic(const Duration(milliseconds: 250), (timer) {
       if (!mounted) return;
       setState(() {
-        // Jitter the sensors slightly
-        _heading = (_heading + _random.nextDouble() * 4 - 2) % 360;
-        _tiltX = double.parse((_tiltX + _random.nextDouble() * 0.4 - 0.2).toStringAsFixed(1));
-        _tiltY = double.parse((_tiltY + _random.nextDouble() * 0.4 - 0.2).toStringAsFixed(1));
-        _altitude = double.parse((_altitude + _random.nextDouble() * 2 - 1).toStringAsFixed(1));
-        _oxygen = (96.0 + _random.nextDouble() * 3.5).clamp(95.0, 100.0);
+        _accX = 0.05 + (_random.nextDouble() * 0.1 - 0.05);
+        _accY = -0.12 + (_random.nextDouble() * 0.1 - 0.05);
+        _accZ = 9.81 + (_random.nextDouble() * 0.15 - 0.07);
+
+        _gravX = 0.0 + (_random.nextDouble() * 0.02 - 0.01);
+        _gravY = 0.0 + (_random.nextDouble() * 0.02 - 0.01);
+        _gravZ = 9.8 + (_random.nextDouble() * 0.02 - 0.01);
+
+        _gyroX = (_random.nextDouble() * 0.06 - 0.03);
+        _gyroY = (_random.nextDouble() * 0.06 - 0.03);
+        _gyroZ = (_random.nextDouble() * 0.04 - 0.02);
+
+        _lightX = (20.0 + _random.nextDouble() * 15.0);
+
+        _linAccX = (_random.nextDouble() * 0.08 - 0.04);
+        _linAccY = (_random.nextDouble() * 0.08 - 0.04);
+        _linAccZ = (_random.nextDouble() * 0.08 - 0.04);
+
+        _magX = 42.1 + (_random.nextDouble() * 1.5 - 0.75);
+        _magY = -15.4 + (_random.nextDouble() * 1.5 - 0.75);
+        _magZ = -28.9 + (_random.nextDouble() * 1.5 - 0.75);
+
+        _orientX = (120.4 + _random.nextDouble() * 2.0 - 1.0) % 360.0;
+        _orientY = 1.2 + (_random.nextDouble() * 0.4 - 0.2);
+        _orientZ = -2.5 + (_random.nextDouble() * 0.4 - 0.2);
       });
     });
   }
 
   @override
   void dispose() {
-    _simulationTimer?.cancel();
+    _sensorTimer?.cancel();
     super.dispose();
-  }
-
-  String _headingDirection(double degrees) {
-    if (degrees >= 337.5 || degrees < 22.5) return 'N';
-    if (degrees >= 22.5 && degrees < 67.5) return 'NE';
-    if (degrees >= 67.5 && degrees < 112.5) return 'E';
-    if (degrees >= 112.5 && degrees < 157.5) return 'SE';
-    if (degrees >= 157.5 && degrees < 202.5) return 'S';
-    if (degrees >= 202.5 && degrees < 247.5) return 'SW';
-    if (degrees >= 247.5 && degrees < 292.5) return 'W';
-    return 'NW';
   }
 
   @override
@@ -63,14 +93,19 @@ class _LiveSensorScreenState extends State<LiveSensorScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.black,
+            size: 22,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
+        titleSpacing: 0,
         title: const Text(
-          'Live Sensor Cockpit',
+          'Live Sensor',
           style: TextStyle(
             fontSize: 22,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
             color: Colors.black,
             letterSpacing: -0.2,
           ),
@@ -78,255 +113,199 @@ class _LiveSensorScreenState extends State<LiveSensorScreen> {
         centerTitle: false,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Live Telemetry Dashboard',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF9CA3AF),
-                  letterSpacing: 0.2,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // ── Grid of Sensor Cards ──
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 0.88,
-                children: [
-                  // 1. Compass Sensor Card
-                  _SensorCard(
-                    title: 'Compass Heading',
-                    value: '${_heading.toStringAsFixed(0)}° ${_headingDirection(_heading)}',
-                    subtitle: 'Direction Tracking',
-                    icon: Icons.explore_rounded,
-                    bgColor: const Color(0xFFE3F2FD),
-                    iconColor: const Color(0xFF1976D2),
-                    onTap: () => Navigator.pushNamed(context, '/compass'),
-                  ),
-
-                  // 2. Level Meter Card
-                  _SensorCard(
-                    title: 'Level & Tilt',
-                    value: 'X: $_tiltX°  Y: $_tiltY°',
-                    subtitle: 'Surface Incline',
-                    icon: Icons.crop_free_rounded,
-                    bgColor: const Color(0xFFE8F5E9),
-                    iconColor: const Color(0xFF388E3C),
-                    onTap: () => Navigator.pushNamed(context, '/level_meter'),
-                  ),
-
-                  // 3. Altitude Card
-                  _SensorCard(
-                    title: 'Altimeter',
-                    value: '${_altitude.toStringAsFixed(0)} m',
-                    subtitle: 'Height Above Sea Level',
-                    icon: Icons.landscape_rounded,
-                    bgColor: const Color(0xFFF3E5F5),
-                    iconColor: const Color(0xFF7B1FA2),
-                    onTap: () => Navigator.pushNamed(context, '/altitude_finder'),
-                  ),
-
-                  // 4. Oxygen Level Card
-                  _SensorCard(
-                    title: 'Oxygen Air',
-                    value: '${_oxygen.toStringAsFixed(1)} %',
-                    subtitle: 'Air Quality (Good)',
-                    icon: Icons.bubble_chart_rounded,
-                    bgColor: const Color(0xFFE0F7FA),
-                    iconColor: const Color(0xFF0097A7),
-                    onTap: () => Navigator.pushNamed(context, '/oxygen_level'),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 28),
-
-              // ── Device Health Diagnostics Panel ──
-              const Text(
-                'Sensor Diagnostics',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF111111),
-                  letterSpacing: -0.2,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF9FAFB),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFF3F4F6)),
-                ),
-                child: Column(
-                  children: [
-                    _DiagnosticRow(
-                      label: 'Magnetometer Status',
-                      status: 'CALIBRATED',
-                      color: const Color(0xFF1E7E6C),
-                    ),
-                    const Divider(height: 20, color: Color(0xFFE5E7EB)),
-                    _DiagnosticRow(
-                      label: 'Accelerometer Status',
-                      status: 'STABLE',
-                      color: const Color(0xFF1E7E6C),
-                    ),
-                    const Divider(height: 20, color: Color(0xFFE5E7EB)),
-                    _DiagnosticRow(
-                      label: 'Barometer Calibration',
-                      status: 'AUTO-SYNCED',
-                      color: const Color(0xFF1976D2),
-                    ),
-                    const Divider(height: 20, color: Color(0xFFE5E7EB)),
-                    _DiagnosticRow(
-                      label: 'Air Quality Index',
-                      status: 'AQI: 35 (Good)',
-                      color: const Color(0xFF388E3C),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SensorCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final String subtitle;
-  final IconData icon;
-  final Color bgColor;
-  final Color iconColor;
-  final VoidCallback onTap;
-
-  const _SensorCard({
-    required this.title,
-    required this.value,
-    required this.subtitle,
-    required this.icon,
-    required this.bgColor,
-    required this.iconColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: bgColor.withOpacity(0.4),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: bgColor.withOpacity(0.8), width: 1.5),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: GridView.count(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          crossAxisCount: 2,
+          crossAxisSpacing: 18,
+          mainAxisSpacing: 18,
+          childAspectRatio: 0.82,
           children: [
-            Align(
-              alignment: Alignment.topRight,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: iconColor, size: 24),
-              ),
+            // 1. Accelerometer
+            _buildSensorItem(
+              title: 'Accelerometer',
+              unit: '(m/s2)',
+              lines: [
+                'x = ${_accX.toStringAsFixed(2)}',
+                'y = ${_accY.toStringAsFixed(2)}',
+                'z = ${_accZ.toStringAsFixed(2)}',
+              ],
             ),
-            const Spacer(),
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF374151),
-              ),
+            // 2. Gravity
+            _buildSensorItem(
+              title: 'Gravity',
+              unit: '(m/s2)',
+              lines: [
+                'X = ${_gravX.toStringAsFixed(2)}',
+                'Y = ${_gravY.toStringAsFixed(2)}',
+                'Z = ${_gravZ.toStringAsFixed(2)}',
+              ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-                color: iconColor,
-              ),
+            // 3. Gyroscope
+            _buildSensorItem(
+              title: 'Gyroscope',
+              unit: '(rad/s)',
+              lines: [
+                'X = ${_gyroX.toStringAsFixed(3)}',
+                'Y = ${_gyroY.toStringAsFixed(3)}',
+                'Z = ${_gyroZ.toStringAsFixed(3)}',
+              ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFF6B7280),
-              ),
+            // 4. Light
+            _buildSensorItem(
+              title: 'Light',
+              unit: '(lx)',
+              lines: [
+                'x = ${_lightX.toStringAsFixed(1)}',
+                'y = ${_lightY.toStringAsFixed(1)}',
+                'z = ${_lightZ.toStringAsFixed(1)}',
+              ],
+            ),
+            // 5. Linear Accelerometer
+            _buildSensorItem(
+              title: 'Linear\nAccelerometer',
+              unit: '(m/s2)',
+              lines: [
+                'X = ${_linAccX.toStringAsFixed(2)}',
+                'Y = ${_linAccY.toStringAsFixed(2)}',
+                'Z = ${_linAccZ.toStringAsFixed(2)}',
+              ],
+            ),
+            // 6. Magnetic Field
+            _buildSensorItem(
+              title: 'Magnetic Field',
+              unit: '(lx)',
+              lines: [
+                'X = ${_magX.toStringAsFixed(1)}',
+                'Y = ${_magY.toStringAsFixed(1)}',
+                'Z = ${_magZ.toStringAsFixed(1)}',
+              ],
+            ),
+            // 7. Orientation
+            _buildSensorItem(
+              title: 'Orientation',
+              unit: '(degree)',
+              lines: [
+                'X = ${_orientX.toStringAsFixed(1)}',
+                'Y = ${_orientY.toStringAsFixed(1)}',
+                'Z = ${_orientZ.toStringAsFixed(1)}',
+              ],
+            ),
+            // 8. Pressure
+            _buildUnsupportedSensorItem(
+              title: 'Pressure',
+              unit: '(hPa)',
+              message: 'Sensor not supported',
             ),
           ],
         ),
       ),
     );
   }
-}
 
-class _DiagnosticRow extends StatelessWidget {
-  final String label;
-  final String status;
-  final Color color;
-
-  const _DiagnosticRow({
-    required this.label,
-    required this.status,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildSensorItem({
+    required String title,
+    required String unit,
+    required List<String> lines,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
-            fontSize: 14.5,
+            fontSize: 16.5,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF374151),
+            color: Color(0xFF0F766E), // Teal
+            height: 1.15,
           ),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(6),
+        const SizedBox(height: 2),
+        Text(
+          unit,
+          style: const TextStyle(
+            fontSize: 13,
+            color: Colors.grey,
           ),
-          child: Text(
-            status,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              color: color,
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6), // Light Grey Card
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: lines
+                  .map(
+                    (line) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: Text(
+                        line,
+                        style: const TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF1F2937),
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUnsupportedSensorItem({
+    required String title,
+    required String unit,
+    required String message,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16.5,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF0F766E),
+            height: 1.15,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          unit,
+          style: const TextStyle(
+            fontSize: 13,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF4B5563),
+              ),
             ),
           ),
         ),
