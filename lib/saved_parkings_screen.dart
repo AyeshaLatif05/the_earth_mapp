@@ -136,22 +136,76 @@ class _SavedParkingsScreenState extends State<SavedParkingsScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.local_parking_rounded,
-                                size: 64,
-                                color: Colors.grey[300],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                _searchQuery.isEmpty
-                                    ? 'No saved parkings yet'
-                                    : 'No results found for "$_searchQuery"',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey[500],
-                                  fontWeight: FontWeight.w500,
+                              if (allParkings.isEmpty) ...[
+                                Stack(
+                                  alignment: Alignment.center,
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Container(
+                                      width: 90,
+                                      height: 90,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: const Color(0xFF1E8278),
+                                          width: 4.5,
+                                        ),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: const Text(
+                                        'P',
+                                        style: TextStyle(
+                                          fontSize: 48,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFF1E8278),
+                                          letterSpacing: -0.5,
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      bottom: -6,
+                                      left: -10,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.directions_car_filled_rounded,
+                                          color: Color(0xFF1E8278),
+                                          size: 36,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
+                                const SizedBox(height: 24),
+                                const Text(
+                                  'No Parking Location Saved',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Color(0xFF111111),
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.2,
+                                  ),
+                                ),
+                              ] else ...[
+                                const Icon(
+                                  Icons.search_off_rounded,
+                                  size: 64,
+                                  color: Color(0xFF9CA3AF),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No results found for "$_searchQuery"',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Color(0xFF6B7280),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         )

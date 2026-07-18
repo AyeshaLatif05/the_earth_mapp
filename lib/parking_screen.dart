@@ -127,13 +127,131 @@ class _ParkingScreenState extends State<ParkingScreen> {
 
     if (currentMarker.markerId.value.isEmpty) return;
 
-    final name = _searchController.text.trim().isNotEmpty
-        ? _searchController.text.trim()
-        : 'Parked Spot';
-    final location = _currentAddress;
-    final latitude = currentMarker.position.latitude;
-    final longitude = currentMarker.position.longitude;
+    final TextEditingController nameController = TextEditingController();
 
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Save Parking',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111111),
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameController,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter parking name',
+                    hintStyle: TextStyle(
+                      color: Color(0xFF9CA3AF),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Color(0xFF1E8278)),
+                    ),
+                  ),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF111111),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _currentAddress,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF6B7280),
+                    fontWeight: FontWeight.w400,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF6B7280),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: () {
+                        final String enteredName = nameController.text.trim();
+                        Navigator.pop(context);
+                        _performSaveParkingSpot(
+                          enteredName.isNotEmpty ? enteredName : 'Parked Spot',
+                          _currentAddress,
+                          currentMarker.position.latitude,
+                          currentMarker.position.longitude,
+                          currentMarker.position,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1E8278),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: const Text(
+                        'Save',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _performSaveParkingSpot(
+    String name,
+    String location,
+    double latitude,
+    double longitude,
+    LatLng position,
+  ) async {
     // Show loading spinner
     showDialog(
       context: context,
@@ -168,7 +286,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
     }
 
     setState(() {
-      _parkedLocation = currentMarker.position;
+      _parkedLocation = position;
       _markers.add(
         Marker(
           markerId: const MarkerId('parked_location'),
