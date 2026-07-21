@@ -1,6 +1,6 @@
-// lib/live_stream_player_screen.dart
-
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 
 class LiveStreamPlayerScreen extends StatefulWidget {
   const LiveStreamPlayerScreen({super.key});
@@ -18,32 +18,39 @@ class _LiveStreamPlayerScreenState extends State<LiveStreamPlayerScreen> {
   late Map<String, dynamic> _activeCamera;
   bool _isInitialized = false;
 
+  VideoPlayerController? _videoController;
+  bool _isVideoLoading = true;
+  bool _isMuted = false;
+
   // Standard mock list of all camera options (shared with cameras_screen.dart)
   final List<Map<String, dynamic>> _recommendedCameras = [
     {
       'id': '1',
-      'name': 'Live Stream Video Name',
+      'name': 'Earth Orbit Stream',
       'imageUrl': 'https://images.unsplash.com/photo-1484406566174-9da000fda645?w=500&auto=format&fit=crop&q=80',
+      'videoUrl': 'https://assets.mixkit.co/videos/preview/mixkit-earth-rotating-in-space-42683-large.mp4',
       'countryCode': 'DE',
       'countryName': 'Germany',
       'flagEmoji': '🇩🇪',
       'isFavorite': false,
-      'category': 'Nature',
+      'category': 'Space',
     },
     {
       'id': '2',
-      'name': 'Live Stream Video Name',
+      'name': 'Cape Town Beach Stream',
       'imageUrl': 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=500&auto=format&fit=crop&q=80',
+      'videoUrl': 'https://assets.mixkit.co/videos/preview/mixkit-waves-in-the-water-1164-large.mp4',
       'countryCode': 'ZA',
       'countryName': 'South Africa',
       'flagEmoji': '🇿🇦',
       'isFavorite': true,
-      'category': 'City Skyline',
+      'category': 'Beaches',
     },
     {
       'id': '3',
-      'name': 'Live Stream Video Name',
+      'name': 'Copenhagen Street Stream',
       'imageUrl': 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=500&auto=format&fit=crop&q=80',
+      'videoUrl': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
       'countryCode': 'DK',
       'countryName': 'Denmark',
       'flagEmoji': '🇩🇰',
@@ -52,8 +59,9 @@ class _LiveStreamPlayerScreenState extends State<LiveStreamPlayerScreen> {
     },
     {
       'id': '4',
-      'name': 'Live Stream Video Name',
+      'name': 'Berlin Traffic Live Cam',
       'imageUrl': 'https://images.unsplash.com/photo-1540959733332-eab4deceeaf7?w=500&auto=format&fit=crop&q=80',
+      'videoUrl': 'https://assets.mixkit.co/videos/preview/mixkit-aerial-view-of-city-traffic-at-night-41547-large.mp4',
       'countryCode': 'DE',
       'countryName': 'Germany',
       'flagEmoji': '🇩🇪',
@@ -62,18 +70,20 @@ class _LiveStreamPlayerScreenState extends State<LiveStreamPlayerScreen> {
     },
     {
       'id': '5',
-      'name': 'Live Stream Video Name',
+      'name': 'Munich Skyline Stream',
       'imageUrl': 'https://images.unsplash.com/photo-1520175480921-4edfa2983e0f?w=500&auto=format&fit=crop&q=80',
+      'videoUrl': 'https://assets.mixkit.co/videos/preview/mixkit-top-aerial-view-of-city-buildings-42691-large.mp4',
       'countryCode': 'DE',
       'countryName': 'Germany',
       'flagEmoji': '🇩🇪',
       'isFavorite': true,
-      'category': 'European Street',
+      'category': 'City View',
     },
     {
       'id': '6',
-      'name': 'Live Stream Video Name',
+      'name': 'Yosemite National Park Stream',
       'imageUrl': 'https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=500&auto=format&fit=crop&q=80',
+      'videoUrl': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
       'countryCode': 'US',
       'countryName': 'United States',
       'flagEmoji': '🇺🇸',
@@ -95,6 +105,50 @@ class _LiveStreamPlayerScreenState extends State<LiveStreamPlayerScreen> {
       }
       _isLiked = _activeCamera['isFavorite'] ?? false;
       _isInitialized = true;
+      _initVideoPlayer();
+    }
+  }
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initVideoPlayer() async {
+    setState(() {
+      _isVideoLoading = true;
+    });
+
+    await _videoController?.dispose();
+    _videoController = null;
+
+    final String? rawUrl = _activeCamera['videoUrl'];
+    final bool isLocal = _activeCamera['isLocalFile'] == true;
+
+    try {
+      if (isLocal && rawUrl != null && rawUrl.isNotEmpty) {
+        _videoController = VideoPlayerController.file(File(rawUrl));
+      } else {
+        final String streamUrl = (rawUrl != null && rawUrl.isNotEmpty)
+            ? rawUrl
+            : 'https://assets.mixkit.co/videos/preview/mixkit-earth-rotating-in-space-42683-large.mp4';
+        _videoController = VideoPlayerController.networkUrl(Uri.parse(streamUrl));
+      }
+
+      await _videoController!.initialize();
+      _videoController!.setLooping(true);
+      if (_isPlaying) {
+        await _videoController!.play();
+      }
+    } catch (e) {
+      debugPrint('Error initializing video player: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isVideoLoading = false;
+        });
+      }
     }
   }
 
@@ -107,12 +161,29 @@ class _LiveStreamPlayerScreenState extends State<LiveStreamPlayerScreen> {
       _viewsCount = 10000 + (camera['id'].hashCode % 15000);
       _likesCount = 500 + (camera['id'].hashCode % 1000);
     });
+    _initVideoPlayer();
   }
 
   void _togglePlay() {
+    if (_videoController != null && _videoController!.value.isInitialized) {
+      if (_isPlaying) {
+        _videoController!.pause();
+      } else {
+        _videoController!.play();
+      }
+    }
     setState(() {
       _isPlaying = !_isPlaying;
     });
+  }
+
+  void _toggleMute() {
+    if (_videoController != null) {
+      _videoController!.setVolume(_isMuted ? 1.0 : 0.0);
+      setState(() {
+        _isMuted = !_isMuted;
+      });
+    }
   }
 
   void _toggleLike() {
@@ -207,37 +278,50 @@ class _LiveStreamPlayerScreenState extends State<LiveStreamPlayerScreen> {
                     aspectRatio: 1.6,
                     child: Stack(
                       children: [
-                        // Background image representing video stream
+                        // Video Stream Player or Fallback Image
                         Positioned.fill(
-                          child: Image.network(
-                            _activeCamera['imageUrl'],
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                color: const Color(0xFF111111),
-                                child: const Center(
-                                  child: CircularProgressIndicator(
-                                    color: Color(0xFF1E7E6C),
+                          child: _videoController != null && _videoController!.value.isInitialized
+                              ? SizedBox.expand(
+                                  child: FittedBox(
+                                    fit: BoxFit.cover,
+                                    clipBehavior: Clip.hardEdge,
+                                    child: SizedBox(
+                                      width: _videoController!.value.size.width > 0
+                                          ? _videoController!.value.size.width
+                                          : 16,
+                                      height: _videoController!.value.size.height > 0
+                                          ? _videoController!.value.size.height
+                                          : 9,
+                                      child: VideoPlayer(_videoController!),
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: const Color(0xFF111111),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.error_outline_rounded,
-                                    color: Colors.white54,
-                                    size: 32,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                                )
+                              : _isVideoLoading
+                                  ? Container(
+                                      color: const Color(0xFF111111),
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                          color: Color(0xFF1E7E6C),
+                                        ),
+                                      ),
+                                    )
+                                  : Image.network(
+                                      _activeCamera['imageUrl'],
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          color: const Color(0xFF111111),
+                                          child: const Center(
+                                            child: Icon(
+                                              Icons.error_outline_rounded,
+                                              color: Colors.white54,
+                                              size: 32,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
                         ),
-
 
                         // Play/Pause circular toggle overlay
                         Center(
@@ -297,7 +381,14 @@ class _LiveStreamPlayerScreenState extends State<LiveStreamPlayerScreen> {
                                   ),
                                 ),
                                 const Spacer(),
-                                const Icon(Icons.volume_up_rounded, color: Colors.white, size: 16),
+                                GestureDetector(
+                                  onTap: _toggleMute,
+                                  child: Icon(
+                                    _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
                                 const SizedBox(width: 10),
                                 const Icon(Icons.hd_rounded, color: Colors.white, size: 16),
                               ],

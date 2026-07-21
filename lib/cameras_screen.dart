@@ -1,6 +1,7 @@
 // lib/cameras_screen.dart
 
 import 'package:flutter/material.dart';
+import 'upload_video_dialog.dart';
 
 class CamerasScreen extends StatefulWidget {
   const CamerasScreen({super.key});
@@ -25,28 +26,31 @@ class _CamerasScreenState extends State<CamerasScreen> {
   final List<Map<String, dynamic>> _allCameras = [
     {
       'id': '1',
-      'name': 'Live Stream Video Name',
+      'name': 'Earth Orbit Stream',
       'imageUrl': 'https://images.unsplash.com/photo-1484406566174-9da000fda645?w=500&auto=format&fit=crop&q=80',
+      'videoUrl': 'https://assets.mixkit.co/videos/preview/mixkit-earth-rotating-in-space-42683-large.mp4',
       'countryCode': 'DE',
       'countryName': 'Germany',
       'flagEmoji': '🇩🇪',
       'isFavorite': false,
-      'category': 'Nature',
+      'category': 'Space',
     },
     {
       'id': '2',
-      'name': 'Live Stream Video Name',
+      'name': 'Cape Town Beach Stream',
       'imageUrl': 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=500&auto=format&fit=crop&q=80',
+      'videoUrl': 'https://assets.mixkit.co/videos/preview/mixkit-waves-in-the-water-1164-large.mp4',
       'countryCode': 'ZA',
       'countryName': 'South Africa',
       'flagEmoji': '🇿🇦',
       'isFavorite': true,
-      'category': 'City Skyline',
+      'category': 'Beaches',
     },
     {
       'id': '3',
-      'name': 'Live Stream Video Name',
+      'name': 'Copenhagen Street Stream',
       'imageUrl': 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=500&auto=format&fit=crop&q=80',
+      'videoUrl': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
       'countryCode': 'DK',
       'countryName': 'Denmark',
       'flagEmoji': '🇩🇰',
@@ -55,8 +59,9 @@ class _CamerasScreenState extends State<CamerasScreen> {
     },
     {
       'id': '4',
-      'name': 'Live Stream Video Name',
+      'name': 'Berlin Traffic Live Cam',
       'imageUrl': 'https://images.unsplash.com/photo-1540959733332-eab4deceeaf7?w=500&auto=format&fit=crop&q=80',
+      'videoUrl': 'https://assets.mixkit.co/videos/preview/mixkit-aerial-view-of-city-traffic-at-night-41547-large.mp4',
       'countryCode': 'DE',
       'countryName': 'Germany',
       'flagEmoji': '🇩🇪',
@@ -65,18 +70,20 @@ class _CamerasScreenState extends State<CamerasScreen> {
     },
     {
       'id': '5',
-      'name': 'Live Stream Video Name',
+      'name': 'Munich Skyline Stream',
       'imageUrl': 'https://images.unsplash.com/photo-1520175480921-4edfa2983e0f?w=500&auto=format&fit=crop&q=80',
+      'videoUrl': 'https://assets.mixkit.co/videos/preview/mixkit-top-aerial-view-of-city-buildings-42691-large.mp4',
       'countryCode': 'DE',
       'countryName': 'Germany',
       'flagEmoji': '🇩🇪',
       'isFavorite': true,
-      'category': 'European Street',
+      'category': 'City View',
     },
     {
       'id': '6',
-      'name': 'Live Stream Video Name',
+      'name': 'Yosemite National Park Stream',
       'imageUrl': 'https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=500&auto=format&fit=crop&q=80',
+      'videoUrl': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
       'countryCode': 'US',
       'countryName': 'United States',
       'flagEmoji': '🇺🇸',
@@ -84,6 +91,24 @@ class _CamerasScreenState extends State<CamerasScreen> {
       'category': 'Nature',
     },
   ];
+
+  void _openUploadDialog() async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => const UploadVideoDialog(),
+    );
+    if (result != null) {
+      setState(() {
+        _allCameras.insert(0, result);
+        _historyCameras.insert(0, result);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Added live stream: ${result['name']}')),
+        );
+      }
+    }
+  }
 
   // List of categories for category tab
   final List<Map<String, dynamic>> _categories = [
@@ -162,6 +187,16 @@ class _CamerasScreenState extends State<CamerasScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      floatingActionButton: _currentIndex == 0
+          ? FloatingActionButton.extended(
+              backgroundColor: const Color(0xFF1A7A68),
+              foregroundColor: Colors.white,
+              elevation: 4,
+              onPressed: _openUploadDialog,
+              icon: const Icon(Icons.add_a_photo_outlined),
+              label: const Text('Upload Stream', style: TextStyle(fontWeight: FontWeight.bold)),
+            )
+          : null,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -179,7 +214,7 @@ class _CamerasScreenState extends State<CamerasScreen> {
                   _buildFavoritesTab(),
                   _buildHistoryTab(),
                 ],
-              ),
+                ),
             ),
 
             // ── Custom Bottom Navigation Bar ──
@@ -251,6 +286,25 @@ class _CamerasScreenState extends State<CamerasScreen> {
                         : null,
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _openUploadDialog,
+              tooltip: 'Upload Live Stream',
+              icon: const Icon(
+                Icons.video_call_rounded,
+                color: Color(0xFF1A7A68),
+                size: 32,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+tentPadding: const EdgeInsets.symmetric(vertical: 13),
                   ),
                 ),
               ),

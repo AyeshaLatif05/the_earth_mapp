@@ -43,6 +43,8 @@ dependencies:
   cloud_firestore: ^6.5.0
   http: ^1.2.2
   geolocator: ^11.0.0
+  video_player: ^2.8.2
+  image_picker: ^1.1.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
